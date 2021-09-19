@@ -56,6 +56,28 @@ impl<S: Schema> Default for CtxMap<S> {
     }
 }
 
+#[macro_export]
+macro_rules! schema {
+    ($id:ident) => {
+        struct $id(fn());
+        impl $crate::schema::Schema for $id {
+            fn data() -> &'static $crate::schema::SchemaData {
+                static KEYS: $crate::schema::SchemaData = $crate::schema::SchemaData {
+                    keys: $crate::schema::exports::once_cell::sync::Lazy::new(
+                        std::default::Default::default,
+                    ),
+                    load: std::sync::Once::new(),
+                };
+                &KEYS
+            }
+            fn load(&self) {
+                (self.0)();
+            }
+        }
+        $crate::schema::exports::inventory::collect!($id);
+    };
+}
+
 #[doc(hidden)]
 pub mod schema {
     use crate::{CtxMapItem, CtxMapKey};
@@ -65,6 +87,10 @@ pub mod schema {
         marker::PhantomData,
         sync::{Once, RwLock},
     };
+    pub mod exports {
+        pub use inventory;
+        pub use once_cell;
+    }
 
     pub trait Schema: inventory::Collect + Sized {
         fn load(&self);

@@ -1,18 +1,4 @@
-struct Schema(fn());
-impl ctxmap::schema::Schema for Schema {
-    fn data() -> &'static ctxmap::schema::SchemaData {
-        static KEYS: ctxmap::schema::SchemaData = ctxmap::schema::SchemaData {
-            keys: once_cell::sync::Lazy::new(std::default::Default::default),
-            load: std::sync::Once::new(),
-        };
-        &KEYS
-    }
-    fn load(&self) {
-        (self.0)();
-    }
-}
-
-inventory::collect!(Schema);
+ctxmap::schema!(Schema);
 
 static KEY_X: once_cell::sync::Lazy<ctxmap::CtxMapKey<Schema, u8>> =
     once_cell::sync::Lazy::new(|| {
