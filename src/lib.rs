@@ -80,6 +80,17 @@ macro_rules! schema {
     };
 }
 
+#[macro_export]
+macro_rules! key {
+    ($schema:ty { $id:ident: $t:ty = $default:expr }) => {
+        static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $t>> =
+            $crate::schema::exports::once_cell::sync::Lazy::new(|| {
+                $crate::schema::Schema::register(|| Box::new(Box::<$t>::new($default)))
+            });
+        $crate::schema::exports::inventory::submit! { Schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
+    };
+}
+
 #[doc(hidden)]
 pub mod schema {
     use crate::{CtxMapItem, CtxMapKey};
@@ -98,7 +109,7 @@ pub mod schema {
         fn load(&self);
         fn data() -> &'static SchemaData;
 
-        fn register<T>(new_default: fn() -> Box<dyn Any>) -> CtxMapKey<Self, T> {
+        fn register<T: ?Sized>(new_default: fn() -> Box<dyn Any>) -> CtxMapKey<Self, T> {
             CtxMapKey {
                 index: Self::data().register(new_default),
                 _value: PhantomData,

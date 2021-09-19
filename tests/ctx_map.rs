@@ -1,10 +1,5 @@
 ctxmap::schema!(Schema);
-
-static KEY_X: once_cell::sync::Lazy<ctxmap::CtxMapKey<Schema, u8>> =
-    once_cell::sync::Lazy::new(|| {
-        ctxmap::schema::Schema::register(|| Box::new(Box::<u8>::new(10)))
-    });
-inventory::submit! { Schema(|| { once_cell::sync::Lazy::force(&KEY_X); })}
+ctxmap::key!(Schema { KEY_X: u8 = 10 });
 
 use ctxmap::CtxMap;
 
