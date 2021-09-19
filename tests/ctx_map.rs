@@ -5,6 +5,7 @@ ctxmap::key!(Schema { KEY_X: u8 = 10 });
 ctxmap::key!(Schema {
     KEY_Y: dyn Display = 5
 });
+ctxmap::key!(Schema { KEY_Z: Option<u8> });
 
 use ctxmap::CtxMap;
 
@@ -13,6 +14,7 @@ fn new() {
     let m = CtxMap::new();
     assert_eq!(m[&KEY_X], 10);
     assert_eq!(m[&KEY_Y].to_string(), "5");
+    assert_eq!(m[&KEY_Z], None);
 }
 
 #[test]

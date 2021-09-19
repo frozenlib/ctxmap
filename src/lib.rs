@@ -82,6 +82,9 @@ macro_rules! schema {
 
 #[macro_export]
 macro_rules! key {
+    ($schema:ty { $id:ident: $t:ty }) => {
+        $crate::key!($schema { $id: $t = std::default::Default::default() });
+    };
     ($schema:ty { $id:ident: $t:ty = $default:expr }) => {
         static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $t>> =
             $crate::schema::exports::once_cell::sync::Lazy::new(|| {
