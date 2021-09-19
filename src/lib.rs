@@ -9,9 +9,9 @@ struct CtxMapItem {
     default: Box<dyn Any>,
     value: Option<*const dyn Any>,
 }
-pub struct CtxMapKey<S, T: ?Sized> {
+pub struct CtxMapKey<S, T: ?Sized + 'static> {
     index: usize,
-    _value: PhantomData<T>,
+    _value: PhantomData<fn() -> &'static T>,
     _schema: PhantomData<S>,
 }
 pub trait CtxMapSchema: Schema {}
@@ -85,7 +85,7 @@ macro_rules! key {
     ($schema:ty { $id:ident: $t:ty = $default:expr }) => {
         static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $t>> =
             $crate::schema::exports::once_cell::sync::Lazy::new(|| {
-                $crate::schema::Schema::register(|| Box::new(Box::<$t>::new($default)))
+                $crate::schema::Schema::register(|| Box::<Box<$t>>::new(Box::new($default)))
             });
         $crate::schema::exports::inventory::submit! { Schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
     };
