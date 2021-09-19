@@ -14,8 +14,10 @@ pub struct CtxMapKey<S, T: ?Sized> {
     _value: PhantomData<T>,
     _schema: PhantomData<S>,
 }
+pub trait CtxMapSchema: Schema {}
+impl<T: Schema> CtxMapSchema for T {}
 
-impl<S: Schema> CtxMap<S> {
+impl<S: CtxMapSchema> CtxMap<S> {
     pub fn new() -> Self {
         S::load_all();
         Self {
@@ -36,7 +38,7 @@ impl<S: Schema> CtxMap<S> {
         retval
     }
 }
-impl<S: Schema, T: ?Sized + 'static> Index<&CtxMapKey<S, T>> for CtxMap<S> {
+impl<S: CtxMapSchema, T: ?Sized + 'static> Index<&CtxMapKey<S, T>> for CtxMap<S> {
     type Output = T;
 
     fn index(&self, index: &CtxMapKey<S, T>) -> &Self::Output {
@@ -50,7 +52,7 @@ impl<S: Schema, T: ?Sized + 'static> Index<&CtxMapKey<S, T>> for CtxMap<S> {
     }
 }
 
-impl<S: Schema> Default for CtxMap<S> {
+impl<S: CtxMapSchema> Default for CtxMap<S> {
     fn default() -> Self {
         Self::new()
     }
