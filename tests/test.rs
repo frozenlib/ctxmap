@@ -7,6 +7,9 @@ ctxmap::key!(Schema {
 });
 ctxmap::key!(Schema { KEY_Z: Option<u8> });
 
+ctxmap::schema!(pub PubSchema);
+ctxmap::key!(PubSchema { pub PUB_KEY: u8 });
+
 use ctxmap::CtxMap;
 
 #[test]

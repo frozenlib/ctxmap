@@ -58,10 +58,11 @@ impl<S: CtxMapSchema> Default for CtxMap<S> {
     }
 }
 
+/// Define a type that implements [`CtxMapSchema`].
 #[macro_export]
 macro_rules! schema {
-    ($id:ident) => {
-        struct $id(fn());
+    ($vis:vis $id:ident) => {
+        $vis struct $id(fn());
         impl $crate::schema::Schema for $id {
             fn data() -> &'static $crate::schema::SchemaData {
                 static KEYS: $crate::schema::SchemaData = $crate::schema::SchemaData {
@@ -80,13 +81,14 @@ macro_rules! schema {
     };
 }
 
+/// Define a key.
 #[macro_export]
 macro_rules! key {
-    ($schema:ty { $id:ident: $type:ty }) => {
-        $crate::key!($schema { $id: $type = std::default::Default::default() });
+    ($schema:ty { $vis:vis $id:ident: $type:ty }) => {
+        $crate::key!($schema { $vis $id: $type = std::default::Default::default() });
     };
-    ($schema:ty { $id:ident: $type:ty = $default:expr }) => {
-        static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $type>> =
+    ($schema:ty { $vis:vis $id:ident: $type:ty = $default:expr }) => {
+        $vis static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $type>> =
             $crate::schema::exports::once_cell::sync::Lazy::new(|| {
                 $crate::schema::Schema::register(|| Box::<Box<$type>>::new(Box::new($default)))
             });
