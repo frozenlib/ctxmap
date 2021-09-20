@@ -57,7 +57,7 @@ impl<S: CtxMapSchema> CtxMap<S> {
     ///
     /// let mut m = ctxmap::CtxMap::new();
     /// assert_eq!(m[&KEY_A], 20);
-    /// m.with(&KEY_A, 30, |m| {
+    /// m.with(&KEY_A, &30, |m| {
     ///     assert_eq!(m[&KEY_A], 30);
     /// });
     /// assert_eq!(m[&KEY_A], 20);
