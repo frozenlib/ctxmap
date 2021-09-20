@@ -230,34 +230,25 @@ macro_rules! key {
         $crate::key!($schema { $vis $id: $type = std::default::Default::default() });
     };
     ($schema:ty { $vis:vis $id:ident: $type:ty = $init:expr }) => {
-        $vis static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $type>> =
-            $crate::schema::exports::once_cell::sync::Lazy::new(|| {
-                $crate::schema::Schema::register(|| Box::<Box<$type>>::new(Box::new($init)))
-            });
-        #[allow(non_camel_case_types)]
-        struct $id {
-            dummy: ()
-        }
-        impl $id {
-            fn _dummy() {
-                use $crate::schema::exports::inventory;
-                $crate::schema::exports::inventory::submit! { $schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
-            }
-        }
-        };
+        $crate::key!(@@ $schema { $vis $id: $type = Box::<Box<$type>>::new(Box::new($init)) });
+    };
     ($schema:ty { $vis:vis ref $id:ident: $type:ty = $init:expr }) => {
+        $crate::key!(@@ $schema { $vis $id: $type = Box::<Box<std::borrow::Borrow<$type>>>::new(Box::new($init)) });
+    };
+    (@@ $schema:ty { $vis:vis $id:ident: $type:ty = $init_box:expr }) => {
         $vis static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $type>> =
             $crate::schema::exports::once_cell::sync::Lazy::new(|| {
-                $crate::schema::Schema::register(|| Box::<Box<std::borrow::Borrow<$type>>>::new(Box::new($init)))
+                $crate::schema::Schema::register(|| $init_box)
             });
         #[allow(non_camel_case_types)]
+        #[doc(hidden)]
         struct $id {
-            dummy: ()
+            _dummy: ()
         }
         impl $id {
             fn _dummy() {
                 use $crate::schema::exports::inventory;
-                $crate::schema::exports::inventory::submit! { $schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
+                inventory::submit! { $schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
             }
         }
     };
