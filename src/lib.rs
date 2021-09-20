@@ -7,7 +7,7 @@ pub struct CtxMap<S> {
     _schema: PhantomData<S>,
 }
 struct CtxMapItem {
-    default: Box<dyn Any>,
+    init: Box<dyn Any>,
     value: Option<*const dyn Any>,
 }
 
@@ -69,9 +69,9 @@ impl<S: CtxMapSchema, T: ?Sized + 'static> Index<&CtxMapKey<S, T>> for CtxMap<S>
             let p = <dyn Any>::downcast_ref::<*const T>(value).expect("type mismatch.");
             return unsafe { &**p };
         }
-        if let Some(p) = <dyn Any>::downcast_ref::<Box<T>>(&*item.default) {
+        if let Some(p) = <dyn Any>::downcast_ref::<Box<T>>(&*item.init) {
             p
-        } else if let Some(p) = <dyn Any>::downcast_ref::<Box<dyn Borrow<T>>>(&*item.default) {
+        } else if let Some(p) = <dyn Any>::downcast_ref::<Box<dyn Borrow<T>>>(&*item.init) {
             (**p).borrow()
         } else {
             unreachable!("type mismatch.")
@@ -171,17 +171,17 @@ macro_rules! key {
     ($schema:ty { $vis:vis $id:ident: $type:ty }) => {
         $crate::key!($schema { $vis $id: $type = std::default::Default::default() });
     };
-    ($schema:ty { $vis:vis $id:ident: $type:ty = $default:expr }) => {
+    ($schema:ty { $vis:vis $id:ident: $type:ty = $init:expr }) => {
         $vis static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $type>> =
             $crate::schema::exports::once_cell::sync::Lazy::new(|| {
-                $crate::schema::Schema::register(|| Box::<Box<$type>>::new(Box::new($default)))
+                $crate::schema::Schema::register(|| Box::<Box<$type>>::new(Box::new($init)))
             });
         $crate::schema::exports::inventory::submit! { $schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
     };
-    ($schema:ty { $vis:vis ref $id:ident: $type:ty = $default:expr }) => {
+    ($schema:ty { $vis:vis ref $id:ident: $type:ty = $init:expr }) => {
         $vis static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $type>> =
             $crate::schema::exports::once_cell::sync::Lazy::new(|| {
-                $crate::schema::Schema::register(|| Box::<Box<std::borrow::Borrow<$type>>>::new(Box::new($default)))
+                $crate::schema::Schema::register(|| Box::<Box<std::borrow::Borrow<$type>>>::new(Box::new($init)))
             });
         $crate::schema::exports::inventory::submit! { $schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
     };
@@ -189,12 +189,12 @@ macro_rules! key {
         $crate::key!($schema { $vis $id: $type });
         $crate::key!($schema { $($tt)* });
     };
-    ($schema:ty { $vis:vis $id:ident: $type:ty = $default:expr, $($tt:tt)* }) => {
-        $crate::key!($schema { $vis $id: $type = $default });
+    ($schema:ty { $vis:vis $id:ident: $type:ty = $init:expr, $($tt:tt)* }) => {
+        $crate::key!($schema { $vis $id: $type = $init });
         $crate::key!($schema { $($tt)* });
     };
-    ($schema:ty { $vis:vis ref $id:ident: $type:ty = $default:expr, $($tt:tt)* }) => {
-        $crate::key!($schema { $vis ref $id: $type = $default });
+    ($schema:ty { $vis:vis ref $id:ident: $type:ty = $init:expr, $($tt:tt)* }) => {
+        $crate::key!($schema { $vis ref $id: $type = $init });
         $crate::key!($schema { $($tt)* });
     };
 }
@@ -240,7 +240,7 @@ pub mod schema {
     #[derive(Default)]
     pub struct Keys(RwLock<Vec<Key>>);
     pub(crate) struct Key {
-        pub new_default: fn() -> Box<dyn Any>,
+        pub init: fn() -> Box<dyn Any>,
     }
 
     impl SchemaData {
@@ -249,16 +249,16 @@ pub mod schema {
             let mut items = Vec::with_capacity(keys.len());
             for key in keys.iter() {
                 items.push(CtxMapItem {
-                    default: (key.new_default)(),
+                    init: (key.init)(),
                     value: None,
                 });
             }
             items
         }
-        fn register(&self, new_default: fn() -> Box<dyn Any>) -> usize {
+        fn register(&self, init: fn() -> Box<dyn Any>) -> usize {
             let mut keys = self.keys.0.write().unwrap();
             let index = keys.len();
-            keys.push(Key { new_default });
+            keys.push(Key { init });
             index
         }
     }
