@@ -15,6 +15,9 @@ ctxmap::key!(Schema {
 ctxmap::schema!(pub PubSchema);
 ctxmap::key!(PubSchema { pub PUB_KEY: u8 });
 
+ctxmap::key!(Schema { ref KEY_STR: str = "abc" });
+ctxmap::key!(Schema { ref KEY_STRING: str = format!("abc-{}", 1) });
+
 use ctxmap::CtxMap;
 
 #[test]
@@ -26,6 +29,8 @@ fn new() {
 
     assert_eq!(m[&KEY_MANY_0], 0);
     assert_eq!(m[&KEY_MANY_1], 10);
+    assert_eq!(&m[&KEY_STR], "abc");
+    assert_eq!(&m[&KEY_STRING], "abc-1");
 }
 
 #[test]
@@ -63,6 +68,15 @@ fn with_dst() {
         assert_eq!(m[&KEY_Y].to_string(), "def");
     });
     assert_eq!(m[&KEY_Y].to_string(), "5");
+}
+
+#[test]
+fn with_str() {
+    let mut m = CtxMap::new();
+    m.with(&KEY_STR, "zzz", |m| {
+        assert_eq!(&m[&KEY_STR], "zzz");
+    });
+    assert_eq!(&m[&KEY_STR], "abc");
 }
 
 #[test]

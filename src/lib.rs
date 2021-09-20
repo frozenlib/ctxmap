@@ -1,5 +1,5 @@
 use crate::schema::*;
-use std::{any::Any, marker::PhantomData, mem::replace, ops::Index};
+use std::{any::Any, borrow::Borrow, marker::PhantomData, mem::replace, ops::Index};
 
 /// Safe, `HashMap<&CtxMapKey, *const dyn Any>` like collection.
 pub struct CtxMap<S> {
@@ -69,7 +69,13 @@ impl<S: CtxMapSchema, T: ?Sized + 'static> Index<&CtxMapKey<S, T>> for CtxMap<S>
             let p = <dyn Any>::downcast_ref::<*const T>(value).expect("type mismatch.");
             return unsafe { &**p };
         }
-        <dyn Any>::downcast_ref::<Box<T>>(&*item.default).expect("type mismatch.")
+        if let Some(p) = <dyn Any>::downcast_ref::<Box<T>>(&*item.default) {
+            p
+        } else if let Some(p) = <dyn Any>::downcast_ref::<Box<dyn Borrow<T>>>(&*item.default) {
+            (**p).borrow()
+        } else {
+            unreachable!("type mismatch.")
+        }
     }
 }
 
@@ -115,17 +121,49 @@ macro_rules! schema {
 ///
 /// ```
 /// ctxmap::schema!(Schema1);
-///
-/// ctxmap::key!(Schema1 { KEY_A: u8 }); // default value will be `Default::default()`.
-/// ctxmap::key!(Schema1 { KEY_B: u8 = 10 });
+/// ctxmap::key!(Schema1 { KEY_A: u8 = 10 });
 /// ctxmap::key!(Schema1 {
 ///     KEY_1: u8,
-///     KEY_2: u16,
+///     KEY_2: u16 = 10,
+///     pub KEY_3: u32,
+///     ref KEY_4: str = "abc",
 /// });
 ///
-/// ctxmap::schema!(pub Schema2);
-/// ctxmap::key!(Schema2 { KEY_X: u8 });
-/// ctxmap::key!(Schema2 { pub KEY_Y: u8 });
+/// ctxmap::schema!(Schema2);
+/// ctxmap::key!(Schema2 { KEY_X: u8 = 10 });
+/// ```
+///
+/// If the initial value is omitted, the initial value will be [`Default::default()`].
+///
+/// ```
+/// ctxmap::schema!(S);
+/// ctxmap::key!(S { KEY_A: u8 });
+/// ctxmap::key!(S { KEY_B: u8 = 50});
+///
+/// let m = ctxmap::CtxMap::new();
+/// assert_eq!(m[&KEY_A], Default::default());
+/// assert_eq!(m[&KEY_B], 50);
+/// ```
+///
+/// If you write `ref` in front of a variable name, you can set the value that implements [`std::borrow::Borrow<T>`] as the initial value.
+///
+/// ```
+/// ctxmap::schema!(S);
+/// ctxmap::key!(S { ref KEY_A: str = "abc" });
+/// ctxmap::key!(S { ref KEY_B: str = format!("abc-{}", 1) });
+///
+/// let m = ctxmap::CtxMap::new();
+/// assert_eq!(&m[&KEY_A], "abc");
+/// assert_eq!(&m[&KEY_B], "abc-1");
+/// ```
+///
+/// You can specify visibility.
+///
+/// ```
+/// ctxmap::schema!(pub S);
+/// ctxmap::key!(S { KEY_A: u8 });
+/// ctxmap::key!(S { pub KEY_B: u8 });
+/// ctxmap::key!(S { pub(crate) KEY_C: u8 });
 /// ```
 #[macro_export]
 macro_rules! key {
@@ -140,12 +178,23 @@ macro_rules! key {
             });
         $crate::schema::exports::inventory::submit! { $schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
     };
+    ($schema:ty { $vis:vis ref $id:ident: $type:ty = $default:expr }) => {
+        $vis static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $type>> =
+            $crate::schema::exports::once_cell::sync::Lazy::new(|| {
+                $crate::schema::Schema::register(|| Box::<Box<std::borrow::Borrow<$type>>>::new(Box::new($default)))
+            });
+        $crate::schema::exports::inventory::submit! { $schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
+    };
     ($schema:ty { $vis:vis $id:ident: $type:ty, $($tt:tt)* }) => {
         $crate::key!($schema { $vis $id: $type });
         $crate::key!($schema { $($tt)* });
     };
     ($schema:ty { $vis:vis $id:ident: $type:ty = $default:expr, $($tt:tt)* }) => {
         $crate::key!($schema { $vis $id: $type = $default });
+        $crate::key!($schema { $($tt)* });
+    };
+    ($schema:ty { $vis:vis ref $id:ident: $type:ty = $default:expr, $($tt:tt)* }) => {
+        $crate::key!($schema { $vis ref $id: $type = $default });
         $crate::key!($schema { $($tt)* });
     };
 }
