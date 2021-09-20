@@ -68,6 +68,13 @@ impl<S: CtxMapSchema> Default for CtxMap<S> {
 }
 
 /// Define a type that implements [`CtxMapSchema`].
+///
+/// # Example
+///
+/// ```
+/// ctxmap::schema!(S1);
+/// ctxmap::schema!(pub S2);
+/// ```
 #[macro_export]
 macro_rules! schema {
     ($vis:vis $id:ident) => {
@@ -91,6 +98,23 @@ macro_rules! schema {
 }
 
 /// Define a key for [`CtxMap`].
+///
+/// # Example
+///
+/// ```
+/// ctxmap::schema!(Schema1);
+///
+/// ctxmap::key!(Schema1 { KEY_A: u8 }); // default value will be `Default::default()`.
+/// ctxmap::key!(Schema1 { KEY_B: u8 = 10 });
+/// ctxmap::key!(Schema1 {
+///     KEY_1: u8,
+///     KEY_2: u16,
+/// });
+///
+/// ctxmap::schema!(pub Schema2);
+/// ctxmap::key!(Schema2 { KEY_X: u8 });
+/// ctxmap::key!(Schema2 { pub KEY_Y: u8 });
+/// ```
 #[macro_export]
 macro_rules! key {
     ($schema:ty { }) => { };
@@ -102,7 +126,7 @@ macro_rules! key {
             $crate::schema::exports::once_cell::sync::Lazy::new(|| {
                 $crate::schema::Schema::register(|| Box::<Box<$type>>::new(Box::new($default)))
             });
-        $crate::schema::exports::inventory::submit! { Schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
+        $crate::schema::exports::inventory::submit! { $schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
     };
     ($schema:ty { $vis:vis $id:ident: $type:ty, $($tt:tt)* }) => {
         $crate::key!($schema { $vis $id: $type });
