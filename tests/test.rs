@@ -18,6 +18,13 @@ ctxmap::key!(PubSchema { pub PUB_KEY: u8 });
 ctxmap::key!(Schema { ref KEY_STR: str = "abc" });
 ctxmap::key!(Schema { ref KEY_STRING: str = format!("abc-{}", 1) });
 
+mod mod_a {
+    ctxmap::schema!(pub ModASchema);
+}
+mod mod_b {
+    ctxmap::key!(super::mod_a::ModASchema { KEY: u8 = 10 });
+}
+
 use ctxmap::CtxMap;
 
 #[test]

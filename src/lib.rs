@@ -152,7 +152,7 @@ impl<S: CtxMapSchema> Default for CtxMap<S> {
 #[macro_export]
 macro_rules! schema {
     ($vis:vis $id:ident) => {
-        $vis struct $id(fn());
+        $vis struct $id(pub fn());
         impl $crate::schema::Schema for $id {
             fn data() -> &'static $crate::schema::SchemaData {
                 static KEYS: $crate::schema::SchemaData = $crate::schema::SchemaData {
