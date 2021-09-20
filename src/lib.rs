@@ -1,3 +1,24 @@
+/*!
+A collection that can store references of different types and lifetimes.
+
+# Example
+
+```
+ctxmap::schema!(Schema);
+ctxmap::key!(Schema { KEY_A: u32 = 10 });
+ctxmap::key!(Schema { ref KEY_B: str = "abc" });
+
+let mut m = ctxmap::CtxMap::new();
+assert_eq!(m[&KEY_A], 10);
+assert_eq!(m[&KEY_B], "abc");
+
+m.with(&KEY_A, &20, |m| {
+    assert_eq!(m[&KEY_A], 20);
+});
+
+assert_eq!(m[&KEY_A], 10);
+```
+*/
 use crate::schema::*;
 use std::{any::Any, borrow::Borrow, marker::PhantomData, mem::replace, ops::Index};
 
@@ -22,6 +43,8 @@ pub struct CtxMapKey<S, T: ?Sized + 'static> {
 }
 
 /// Available key collection for [`CtxMap`].
+///
+/// Use [`macro@schema`] macro to define a type that implement `CtxMapSchema`.
 pub trait CtxMapSchema: Schema {}
 impl<T: Schema> CtxMapSchema for T {}
 

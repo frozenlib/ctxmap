@@ -4,7 +4,7 @@
 [![Docs.rs](https://docs.rs/ctxmap/badge.svg)](https://docs.rs/ctxmap/)
 [![Actions Status](https://github.com/frozenlib/ctxmap/workflows/CI/badge.svg)](https://github.com/frozenlib/ctxmap/actions)
 
-Safe, `HashMap<&'static _, *const dyn Any>` like collection.
+A collection that can store references of different types and lifetimes.
 
 ## Install
 
