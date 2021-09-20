@@ -53,3 +53,10 @@ fn with_dst() {
     });
     assert_eq!(m[&KEY_Y].to_string(), "5");
 }
+
+#[test]
+fn in_func_key() {
+    ctxmap::key!(Schema { KEY_A: u8 = 99 });
+    let m = CtxMap::new();
+    assert_eq!(m[&KEY_A], 99);
+}
