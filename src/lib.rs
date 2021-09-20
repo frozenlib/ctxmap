@@ -91,11 +91,15 @@ impl<S: CtxMapSchema> CtxMap<S> {
         value: &T,
         f: impl FnOnce(&mut Self) -> U,
     ) -> U {
+        let index = key.index;
         let value_new = &(value as *const T) as &dyn Any;
-        let value_old = replace(&mut self.items[key.index].value, Some(value_new));
-        let retval = f(self);
-        self.items[key.index].value = value_old;
-        retval
+        let value_old = replace(&mut self.items[index].value, Some(value_new));
+        let g = Guard {
+            m: self,
+            value_old,
+            index,
+        };
+        f(g.m)
     }
 }
 impl<S: CtxMapSchema, T: ?Sized + 'static> Index<&CtxMapKey<S, T>> for CtxMap<S> {
@@ -121,6 +125,17 @@ impl<S: CtxMapSchema, T: ?Sized + 'static> Index<&CtxMapKey<S, T>> for CtxMap<S>
 impl<S: CtxMapSchema> Default for CtxMap<S> {
     fn default() -> Self {
         Self::new()
+    }
+}
+struct Guard<'a, S> {
+    m: &'a mut CtxMap<S>,
+    index: usize,
+    value_old: Option<*const dyn Any>,
+}
+
+impl<'a, S> Drop for Guard<'a, S> {
+    fn drop(&mut self) {
+        self.m.items[self.index].value = self.value_old;
     }
 }
 
