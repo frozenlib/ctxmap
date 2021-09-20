@@ -25,6 +25,18 @@ impl<T: Schema> CtxMapSchema for T {}
 
 impl<S: CtxMapSchema> CtxMap<S> {
     /// Create a new `CtxMap` with default values.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// ctxmap::schema!(S);
+    /// ctxmap::key!(S { KEY_A: u16 = 20 });
+    /// ctxmap::key!(S { KEY_B: u8 });
+    ///
+    /// let m = ctxmap::CtxMap::new();
+    /// assert_eq!(m[&KEY_A], 20);
+    /// assert_eq!(m[&KEY_B], 0);
+    /// ```
     pub fn new() -> Self {
         S::load_all();
         Self {
