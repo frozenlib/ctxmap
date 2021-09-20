@@ -36,9 +36,9 @@ struct CtxMapItem {
 ///
 /// Use [`key`] macro to create `CtxMapKey`.
 #[derive(Eq, PartialEq, Hash)]
-pub struct CtxMapKey<S, T: ?Sized + 'static> {
+pub struct CtxMapKey<S, T: ?Sized> {
     index: usize,
-    _value: PhantomData<fn() -> &'static T>,
+    _value: PhantomData<fn(&T) -> &T>,
     _schema: PhantomData<S>,
 }
 
