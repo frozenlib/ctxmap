@@ -82,13 +82,13 @@ macro_rules! schema {
 
 #[macro_export]
 macro_rules! key {
-    ($schema:ty { $id:ident: $t:ty }) => {
-        $crate::key!($schema { $id: $t = std::default::Default::default() });
+    ($schema:ty { $id:ident: $type:ty }) => {
+        $crate::key!($schema { $id: $type = std::default::Default::default() });
     };
-    ($schema:ty { $id:ident: $t:ty = $default:expr }) => {
-        static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $t>> =
+    ($schema:ty { $id:ident: $type:ty = $default:expr }) => {
+        static $id: $crate::schema::exports::once_cell::sync::Lazy<$crate::CtxMapKey<$schema, $type>> =
             $crate::schema::exports::once_cell::sync::Lazy::new(|| {
-                $crate::schema::Schema::register(|| Box::<Box<$t>>::new(Box::new($default)))
+                $crate::schema::Schema::register(|| Box::<Box<$type>>::new(Box::new($default)))
             });
         $crate::schema::exports::inventory::submit! { Schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
     };
