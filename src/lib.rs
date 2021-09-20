@@ -93,6 +93,7 @@ macro_rules! schema {
 /// Define a key for [`CtxMap`].
 #[macro_export]
 macro_rules! key {
+    ($schema:ty { }) => { };
     ($schema:ty { $vis:vis $id:ident: $type:ty }) => {
         $crate::key!($schema { $vis $id: $type = std::default::Default::default() });
     };
@@ -102,6 +103,14 @@ macro_rules! key {
                 $crate::schema::Schema::register(|| Box::<Box<$type>>::new(Box::new($default)))
             });
         $crate::schema::exports::inventory::submit! { Schema(|| { $crate::schema::exports::once_cell::sync::Lazy::force(&$id); })}
+    };
+    ($schema:ty { $vis:vis $id:ident: $type:ty, $($tt:tt)* }) => {
+        $crate::key!($schema { $vis $id: $type });
+        $crate::key!($schema { $($tt)* });
+    };
+    ($schema:ty { $vis:vis $id:ident: $type:ty = $default:expr, $($tt:tt)* }) => {
+        $crate::key!($schema { $vis $id: $type = $default });
+        $crate::key!($schema { $($tt)* });
     };
 }
 

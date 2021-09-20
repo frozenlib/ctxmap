@@ -7,6 +7,11 @@ ctxmap::key!(Schema {
 });
 ctxmap::key!(Schema { KEY_Z: Option<u8> });
 
+ctxmap::key!(Schema {
+    KEY_MANY_0: u8,
+    KEY_MANY_1: u8 = 10,
+});
+
 ctxmap::schema!(pub PubSchema);
 ctxmap::key!(PubSchema { pub PUB_KEY: u8 });
 
@@ -18,6 +23,9 @@ fn new() {
     assert_eq!(m[&KEY_X], 10);
     assert_eq!(m[&KEY_Y].to_string(), "5");
     assert_eq!(m[&KEY_Z], None);
+
+    assert_eq!(m[&KEY_MANY_0], 0);
+    assert_eq!(m[&KEY_MANY_1], 10);
 }
 
 #[test]
