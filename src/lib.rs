@@ -24,7 +24,7 @@ pub trait CtxMapSchema: Schema {}
 impl<T: Schema> CtxMapSchema for T {}
 
 impl<S: CtxMapSchema> CtxMap<S> {
-    /// Create a new `CtxMap` with default values.
+    /// Create a new `CtxMap` with initial values.
     ///
     /// # Example
     ///
@@ -46,6 +46,20 @@ impl<S: CtxMapSchema> CtxMap<S> {
     }
 
     /// Sets a value to `CtxMap` only while `f` is being called.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// ctxmap::schema!(S);
+    /// ctxmap::key!(S { KEY_A: u16 = 20 });
+    ///
+    /// let mut m = ctxmap::CtxMap::new();
+    /// assert_eq!(m[&KEY_A], 20);
+    /// m.with(&KEY_A, 30, |m| {
+    ///     assert_eq!(m[&KEY_A], 30);
+    /// });
+    /// assert_eq!(m[&KEY_A], 20);
+    /// ```
     pub fn with<T: ?Sized + 'static, U>(
         &mut self,
         key: &CtxMapKey<S, T>,
