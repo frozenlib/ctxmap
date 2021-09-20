@@ -1,6 +1,7 @@
 use crate::schema::*;
 use std::{any::Any, marker::PhantomData, mem::replace, ops::Index};
 
+/// Safe, `HashMap<&CtxMapKey, *const dyn Any>` like collection.
 pub struct CtxMap<S> {
     items: Vec<CtxMapItem>,
     _schema: PhantomData<S>,
@@ -9,15 +10,21 @@ struct CtxMapItem {
     default: Box<dyn Any>,
     value: Option<*const dyn Any>,
 }
+
+/// A key for [`CtxMap`].
+#[derive(Eq, PartialEq, Hash)]
 pub struct CtxMapKey<S, T: ?Sized + 'static> {
     index: usize,
     _value: PhantomData<fn() -> &'static T>,
     _schema: PhantomData<S>,
 }
+
+/// Available key collection for [`CtxMap`].
 pub trait CtxMapSchema: Schema {}
 impl<T: Schema> CtxMapSchema for T {}
 
 impl<S: CtxMapSchema> CtxMap<S> {
+    /// Create a new `CtxMap` with default values.
     pub fn new() -> Self {
         S::load_all();
         Self {
@@ -25,6 +32,8 @@ impl<S: CtxMapSchema> CtxMap<S> {
             _schema: PhantomData,
         }
     }
+
+    /// Sets a value to `CtxMap` only while `f` is being called.
     pub fn with<T: ?Sized + 'static, U>(
         &mut self,
         key: &CtxMapKey<S, T>,
@@ -81,7 +90,7 @@ macro_rules! schema {
     };
 }
 
-/// Define a key.
+/// Define a key for [`CtxMap`].
 #[macro_export]
 macro_rules! key {
     ($schema:ty { $vis:vis $id:ident: $type:ty }) => {
