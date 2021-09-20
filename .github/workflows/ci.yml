@@ -19,19 +19,29 @@ jobs:
         run: cargo test --verbose --no-run
       - name: Run tests
         run: cargo test --verbose
+
       - name: Clippy
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: cargo clippy --all-features --tests --lib -- -W clippy::all
         env:
           RUSTFLAGS: -D warnings
+
       - name: Install latest nightly
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           override: true
           components: rustfmt, clippy
+
       - name: Set minimal versions
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: cargo +nightly update -Z minimal-versions
+
       - name: Build tests (minimal versions)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: cargo test --verbose --no-run
+
       - name: Run tests (minimal versions)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: cargo test --verbose
