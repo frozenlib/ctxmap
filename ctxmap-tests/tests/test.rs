@@ -24,8 +24,6 @@ mod mod_a {
 mod mod_b {
     ctxmap::key!(super::mod_a::ModASchema { KEY: u8 = 10 });
 }
-mod dummy {}
-use dummy as inventory;
 
 use ctxmap::CtxMap;
 

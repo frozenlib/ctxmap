@@ -1,20 +1,2 @@
-[package]
-name = "ctxmap"
-version = "0.1.0"
-edition = "2018"
-authors = ["frozenlib"]
-license = "MIT OR Apache-2.0"
-readme = "README.md"
-repository = "https://github.com/frozenlib/ctxmap"
-documentation = "https://docs.rs/ctxmap/"
-keywords = ["map", "reference", "scope", "lifetime"]
-categories = ["data-structures"]
-description = "A collection that can store references of different types and lifetimes."
-
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-once_cell = "1.8.0"
-inventory = "0.1.10"
-ctor = "0.1.21"      # To avoid compile errors with minimal-versions
+[workspace]
+members = ["ctxmap", "ctxmap-tests"]
