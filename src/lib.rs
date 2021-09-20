@@ -1,7 +1,7 @@
 use crate::schema::*;
 use std::{any::Any, borrow::Borrow, marker::PhantomData, mem::replace, ops::Index};
 
-/// Safe, `HashMap<&CtxMapKey, *const dyn Any>` like collection.
+/// A collection that can store references of different types and lifetimes.
 pub struct CtxMap<S> {
     items: Vec<CtxMapItem>,
     _schema: PhantomData<S>,
@@ -12,6 +12,8 @@ struct CtxMapItem {
 }
 
 /// A key for [`CtxMap`].
+///
+/// Use [`key`] macro to create `CtxMapKey`.
 #[derive(Eq, PartialEq, Hash)]
 pub struct CtxMapKey<S, T: ?Sized + 'static> {
     index: usize,
@@ -101,6 +103,8 @@ impl<S: CtxMapSchema> Default for CtxMap<S> {
 
 /// Define a type that implements [`CtxMapSchema`].
 ///
+/// The `schema!` macro defines a global item and does not run anything.
+///
 /// # Example
 ///
 /// ```
@@ -130,6 +134,8 @@ macro_rules! schema {
 }
 
 /// Define a key for [`CtxMap`].
+///
+/// The `key!` macro defines a global item and does not run anything.
 ///
 /// # Example
 ///

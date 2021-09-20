@@ -9,7 +9,7 @@ repository = "https://github.com/frozenlib/ctxmap"
 documentation = "https://docs.rs/ctxmap/"
 keywords = ["map", "reference", "scope", "lifetime"]
 categories = ["data-structures"]
-description = "Safe, `HashMap<&'static _, *const dyn Any>` like collection."
+description = "A collection that can store references of different types and lifetimes."
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
