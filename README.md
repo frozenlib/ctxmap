@@ -19,18 +19,25 @@ ctxmap = "0.1.0"
 
 ```rust
 ctxmap::schema!(Schema);
-ctxmap::key!(Schema { KEY_A: u32 = 10 });
-ctxmap::key!(Schema { KEY_B: str = "abc" });
-
-let mut m = ctxmap::CtxMap::new();
-assert_eq!(m[&KEY_A], 10);
-assert_eq!(&m[&KEY_B], "abc");
-
-m.with(&KEY_A, &20, |m| {
-    assert_eq!(m[&KEY_A], 20);
+ctxmap::key!(Schema {
+    KEY_NO_DEFAULT: u32,
+    KEY_INT: u32 = 10,
+    KEY_DYN: dyn std::fmt::Display = 10,
+    KEY_STR: str = "abc",
+    KEY_STRING: str = format!("abc-{}", 10),
 });
 
-assert_eq!(m[&KEY_A], 10);
+let mut m = ctxmap::CtxMap::new();
+assert_eq!(m.get(&KEY_NO_DEFAULT), None);
+assert_eq!(m.get(&KEY_INT), Some(&10));
+assert_eq!(m[&KEY_INT], 10);
+assert_eq!(&m[&KEY_STR], "abc");
+
+m.with(&KEY_INT, &20, |m| {
+    assert_eq!(m[&KEY_INT], 20);
+});
+
+assert_eq!(m[&KEY_INT], 10);
 ```
 
 ## License
