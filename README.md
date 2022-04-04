@@ -12,7 +12,7 @@ Add this to your Cargo.toml:
 
 ```toml
 [dependencies]
-ctxmap = "0.1.0"
+ctxmap = "0.2.0"
 ```
 
 ## Example
