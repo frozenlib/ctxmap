@@ -20,7 +20,7 @@ ctxmap = "0.1.0"
 ```rust
 ctxmap::schema!(Schema);
 ctxmap::key!(Schema { KEY_A: u32 = 10 });
-ctxmap::key!(Schema { ref KEY_B: str = "abc" });
+ctxmap::key!(Schema { KEY_B: str = "abc" });
 
 let mut m = ctxmap::CtxMap::new();
 assert_eq!(m[&KEY_A], 10);

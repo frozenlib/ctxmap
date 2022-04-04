@@ -1,11 +1,11 @@
+use ctxmap::CtxMap;
 use std::fmt::Display;
 
 ctxmap::schema!(Schema);
 ctxmap::key!(Schema { KEY_X: u8 = 10 });
 ctxmap::key!(Schema {
-    KEY_Y: dyn Display = 5
+    KEY_Y: dyn Display = 5,
 });
-ctxmap::key!(Schema { KEY_Z: Option<u8> });
 
 ctxmap::key!(Schema {
     KEY_MANY_0: u8,
@@ -15,8 +15,12 @@ ctxmap::key!(Schema {
 ctxmap::schema!(pub PubSchema);
 ctxmap::key!(PubSchema { pub PUB_KEY: u8 });
 
-ctxmap::key!(Schema { ref KEY_STR: str = "abc" });
-ctxmap::key!(Schema { ref KEY_STRING: str = format!("abc-{}", 1) });
+ctxmap::key!(Schema {
+    KEY_STR: str = "abc"
+});
+ctxmap::key!(Schema {
+    KEY_STRING: str = format!("abc-{}", 1)
+});
 
 mod mod_a {
     ctxmap::schema!(pub ModASchema);
@@ -25,16 +29,13 @@ mod mod_b {
     ctxmap::key!(super::mod_a::ModASchema { KEY: u8 = 10 });
 }
 
-use ctxmap::CtxMap;
-
 #[test]
 fn new() {
     let m = CtxMap::new();
     assert_eq!(m[&KEY_X], 10);
     assert_eq!(m[&KEY_Y].to_string(), "5");
-    assert_eq!(m[&KEY_Z], None);
 
-    assert_eq!(m[&KEY_MANY_0], 0);
+    assert!(m.get(&KEY_MANY_0).is_none());
     assert_eq!(m[&KEY_MANY_1], 10);
     assert_eq!(&m[&KEY_STR], "abc");
     assert_eq!(&m[&KEY_STRING], "abc-1");
