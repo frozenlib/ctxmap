@@ -207,29 +207,21 @@ where
 
 pub mod helpers {
     pub use once_cell::sync::Lazy;
-    use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
-    pub struct SchemaData(Mutex<Keys>);
+    pub struct SchemaData {
+        next: AtomicUsize,
+    }
 
     impl SchemaData {
-        pub fn new() -> Self {
-            SchemaData(Mutex::new(Keys { len: 0 }))
+        pub const fn new() -> Self {
+            SchemaData {
+                next: AtomicUsize::new(0),
+            }
         }
         pub(crate) fn push_key(&self) -> usize {
-            let mut d = self.0.lock().unwrap();
-            let index = d.len;
-            d.len += 1;
-            index
+            self.next.fetch_add(1, Ordering::SeqCst)
         }
-    }
-    impl Default for SchemaData {
-        fn default() -> Self {
-            Self::new()
-        }
-    }
-
-    struct Keys {
-        len: usize,
     }
 }
 
@@ -247,8 +239,7 @@ macro_rules! schema {
         $vis struct $id;
         impl $crate::Schema for $id {
             fn data() -> &'static $crate::helpers::SchemaData {
-                static DATA: $crate::helpers::Lazy<$crate::helpers::SchemaData> =
-                    $crate::helpers::Lazy::new($crate::helpers::SchemaData::new);
+                static DATA: $crate::helpers::SchemaData = $crate::helpers::SchemaData::new();
                 &DATA
             }
         }
