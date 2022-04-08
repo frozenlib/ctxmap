@@ -89,7 +89,7 @@ impl<S: Schema> CtxMap<S> {
         &mut self,
         key: &'static Key<S, T>,
         value: &T,
-        f: impl Fn(&mut Self) -> U,
+        f: impl FnOnce(&mut Self) -> U,
     ) -> U {
         let index = *key.index;
         if self.ptrs.len() <= index {
