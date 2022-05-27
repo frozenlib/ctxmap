@@ -75,7 +75,7 @@ impl<S: Schema> CtxMap<S> {
         }
     }
 
-    /// Sets a value to `CtxMap` only while `f` is being called.
+    /// Sets a value corresponding to the key only while `f` is being called.
     ///
     /// # Example
     ///
@@ -98,10 +98,27 @@ impl<S: Schema> CtxMap<S> {
     ) -> U {
         self.view().with(key, value, f)
     }
+
+    /// Get [`CtxMapView`] that references `self`.
     pub fn view(&mut self) -> CtxMapView<S> {
         CtxMapView(self)
     }
 
+    /// Returns a reference to the value corresponding to the key.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// ctxmap::schema!(S);
+    /// ctxmap::key!(S { KEY_A: u16 });
+    ///
+    /// let mut m = ctxmap::CtxMap::new();
+    /// assert_eq!(m.get(&KEY_A), None);
+    /// m.with(&KEY_A, &10, |m| {
+    ///     assert_eq!(m.get(&KEY_A), Some(&10));
+    /// });
+    /// assert_eq!(m.get(&KEY_A), None);
+    /// ```
     pub fn get<T: ?Sized>(&self, key: &'static Key<S, T>) -> Option<&T> {
         let index = *key.index;
         if let Some(Some(p)) = self.ptrs.get(index) {
@@ -141,9 +158,32 @@ where
     }
 }
 
+/// Mutable reference to [`CtxMap`] where the value has changed.
+///
+/// Use `CtxMapViwe` instead of `&mut CtxMap` because `&mut CtxMap`,
+/// whose value has been changed, will be broken if [`std::mem::swap`] is used.
 pub struct CtxMapView<'a, S: Schema>(&'a mut CtxMap<S>);
 
 impl<'a, S: Schema> CtxMapView<'a, S> {
+    /// Sets a value to `CtxMap` only while `f` is being called.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// ctxmap::schema!(S);
+    /// ctxmap::key!(S { KEY_A: u16 = 20 });
+    ///
+    /// let mut m = ctxmap::CtxMap::new();
+    /// assert_eq!(m[&KEY_A], 20);
+    /// m.with(&KEY_A, &30, |m| {
+    ///     assert_eq!(m[&KEY_A], 30);
+    ///     m.with(&KEY_A, &40, |m| {
+    ///        assert_eq!(m[&KEY_A], 40);
+    ///    });
+    ///    assert_eq!(m[&KEY_A], 30);
+    /// });
+    /// assert_eq!(m[&KEY_A], 20);
+    /// ```
     pub fn with<T: ?Sized + 'static, U>(
         &mut self,
         key: &'static Key<S, T>,
@@ -161,6 +201,8 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
         self.0.ptrs[index] = old;
         retval
     }
+
+    /// Return `CtxMapView` with modified lifetime.
     pub fn viwe(&mut self) -> CtxMapView<S> {
         CtxMapView(self.0)
     }
@@ -169,7 +211,7 @@ impl<'a, S: Schema> Deref for CtxMapView<'a, S> {
     type Target = CtxMap<S>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 
@@ -187,7 +229,7 @@ trait KeyData<T: ?Sized>: Send + Sync {
     fn init(&self) -> Box<dyn Any>;
 }
 
-/// Available key collection for [`CtxMap`].
+/// Key collection for [`CtxMap`].
 ///
 /// Use [`schema`] macro to define a type that implement `Schema`.
 pub trait Schema: 'static + Sized {
@@ -283,28 +325,39 @@ macro_rules! schema {
 /// # Example
 ///
 /// ```
-/// ctxmap::schema!(Schema1);
-/// ctxmap::key!(Schema1 { KEY_A: u8 = 10 });
-/// ctxmap::key!(Schema1 {
-///     KEY_1: u8,
-///     KEY_2: u16 = 10,
-///     pub KEY_3: u32,
-///     pub KEY_4: str = "abc",
-/// });
-///
-/// ctxmap::schema!(Schema2);
-/// ctxmap::key!(Schema2 { KEY_X: u8 = 10 });
+/// ctxmap::schema!(S);
+/// ctxmap::key!(S { KEY_1: u8 });
+/// ctxmap::key!(S { KEY_2: str });
 /// ```
+///
+/// You can define multiple keys at once.
 ///
 /// ```
 /// ctxmap::schema!(S);
-/// ctxmap::key!(S { KEY_A: u8 });
-/// ctxmap::key!(S { KEY_B: u8 = 50});
+/// ctxmap::key!(S {
+///     KEY_1: u8,
+///     KEY_2: str,
+/// });
+/// ```
 ///
-/// let m = ctxmap::CtxMap::new();
-/// assert_eq!(m.get(&KEY_A), None);
-/// assert_eq!(m.get(&KEY_B), Some(&50));
-/// assert_eq!(m[&KEY_B], 50);
+/// You can specify a default value.
+///
+/// The default value can be an expression that, when applied with `&` operator, becomes a reference to the type of the key.
+///
+/// For example, `&"abc"` and `&String::new()` can be `&str`,
+/// so `"abc"` and `String::new()` can be used as default values for keys of type `str`.
+///
+/// ```
+/// use std::fmt::Display;
+///
+/// ctxmap::schema!(S);
+/// ctxmap::key!(S {
+///     KEY_1: u8 = 10,
+///     KEY_2: str = "abc",
+///     KEY_3: str = String::new(),
+///     KEY_4: dyn Display = 10,
+///     KEY_5: dyn Display = "xyz",
+/// });
 /// ```
 ///
 /// You can specify visibility.
