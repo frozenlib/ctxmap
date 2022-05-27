@@ -1,0 +1,53 @@
+error[E0308]: mismatched types
+  --> tests/compile_fail/swap.rs:12:22
+   |
+12 |             swap(m0, m1);
+   |                      ^^ lifetime mismatch
+   |
+   = note: expected mutable reference `&mut CtxMapView<'_, Schema>`
+              found mutable reference `&mut CtxMapView<'_, Schema>`
+note: the anonymous lifetime #2 defined here...
+  --> tests/compile_fail/swap.rs:11:29
+   |
+11 |           m1.with(&KEY_X, &3, |m1| {
+   |  _____________________________^
+12 | |             swap(m0, m1);
+13 | |         });
+   | |_________^
+note: ...does not necessarily outlive the anonymous lifetime #2 defined here
+  --> tests/compile_fail/swap.rs:10:25
+   |
+10 |       m0.with(&KEY_X, &2, |m0| {
+   |  _________________________^
+11 | |         m1.with(&KEY_X, &3, |m1| {
+12 | |             swap(m0, m1);
+13 | |         });
+14 | |     });
+   | |_____^
+
+error[E0308]: mismatched types
+  --> tests/compile_fail/swap.rs:12:22
+   |
+12 |             swap(m0, m1);
+   |                      ^^ lifetime mismatch
+   |
+   = note: expected mutable reference `&mut CtxMapView<'_, Schema>`
+              found mutable reference `&mut CtxMapView<'_, Schema>`
+note: the anonymous lifetime #2 defined here...
+  --> tests/compile_fail/swap.rs:10:25
+   |
+10 |       m0.with(&KEY_X, &2, |m0| {
+   |  _________________________^
+11 | |         m1.with(&KEY_X, &3, |m1| {
+12 | |             swap(m0, m1);
+13 | |         });
+14 | |     });
+   | |_____^
+note: ...does not necessarily outlive the anonymous lifetime #2 defined here
+  --> tests/compile_fail/swap.rs:11:29
+   |
+11 |           m1.with(&KEY_X, &3, |m1| {
+   |  _____________________________^
+12 | |             swap(m0, m1);
+13 | |         });
+   | |_________^

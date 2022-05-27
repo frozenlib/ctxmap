@@ -8,3 +8,4 @@ publish = false
 
 [dependencies]
 ctxmap = { path = "../ctxmap" }
+trybuild = "1.0.61"

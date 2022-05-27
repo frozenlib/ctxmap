@@ -38,7 +38,12 @@
 
 use helpers::*;
 use once_cell::sync::Lazy;
-use std::{any::Any, cell::RefCell, marker::PhantomData, ops::Index};
+use std::{
+    any::Any,
+    cell::RefCell,
+    marker::PhantomData,
+    ops::{Deref, Index},
+};
 
 /// A collection that can store references of different types and lifetimes.
 pub struct CtxMap<S: Schema> {
@@ -89,18 +94,12 @@ impl<S: Schema> CtxMap<S> {
         &mut self,
         key: &'static Key<S, T>,
         value: &T,
-        f: impl FnOnce(&mut Self) -> U,
+        f: impl FnOnce(&mut CtxMapView<S>) -> U,
     ) -> U {
-        let index = *key.index;
-        if self.ptrs.len() <= index {
-            self.ptrs.resize_with(index + 1, || None);
-        }
-        let old = self.ptrs[index];
-        let ptr: *const T = value;
-        self.ptrs[index] = Some(&ptr);
-        let retval = f(self);
-        self.ptrs[index] = old;
-        retval
+        self.view().with(key, value, f)
+    }
+    pub fn view(&mut self) -> CtxMapView<S> {
+        CtxMapView(self)
     }
 
     pub fn get<T: ?Sized>(&self, key: &'static Key<S, T>) -> Option<&T> {
@@ -139,6 +138,38 @@ where
 
     fn index(&self, index: &'static Key<S, T>) -> &Self::Output {
         self.get(index).expect("no entry found for key")
+    }
+}
+
+pub struct CtxMapView<'a, S: Schema>(&'a mut CtxMap<S>);
+
+impl<'a, S: Schema> CtxMapView<'a, S> {
+    pub fn with<T: ?Sized + 'static, U>(
+        &mut self,
+        key: &'static Key<S, T>,
+        value: &T,
+        f: impl FnOnce(&mut Self) -> U,
+    ) -> U {
+        let index = *key.index;
+        if self.0.ptrs.len() <= index {
+            self.0.ptrs.resize_with(index + 1, || None);
+        }
+        let old = self.0.ptrs[index];
+        let ptr: *const T = value;
+        self.0.ptrs[index] = Some(&ptr);
+        let retval = f(self);
+        self.0.ptrs[index] = old;
+        retval
+    }
+    pub fn viwe(&mut self) -> CtxMapView<S> {
+        CtxMapView(self.0)
+    }
+}
+impl<'a, S: Schema> Deref for CtxMapView<'a, S> {
+    type Target = CtxMap<S>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
