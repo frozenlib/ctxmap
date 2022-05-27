@@ -93,25 +93,3 @@ fn in_func_key() {
     let m = CtxMap::new();
     assert_eq!(m[&KEY_A], 99);
 }
-
-// #[test]
-// fn swap_safe() {
-//     let mut m0 = CtxMap::new();
-//     let mut m1 = CtxMap::new();
-
-//     m0.with(&KEY_X, &20, |m0| {
-//         swap(m0, &mut m1);
-//     });
-// }
-
-// #[test]
-// fn swap_safe_2() {
-//     let mut m0 = CtxMap::new();
-//     let mut m1 = CtxMap::new();
-
-//     m0.with(&KEY_X, &20, |m0| {
-//         m1.with(&KEY_X, &30, |m1| {
-//             swap(m0, m1);
-//         });
-//     });
-// }
