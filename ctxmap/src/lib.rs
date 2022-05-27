@@ -203,7 +203,7 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
     }
 
     /// Return `CtxMapView` with modified lifetime.
-    pub fn viwe(&mut self) -> CtxMapView<S> {
+    pub fn view(&mut self) -> CtxMapView<S> {
         CtxMapView(self.0)
     }
 }
