@@ -188,7 +188,7 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
         &mut self,
         key: &'static Key<S, T>,
         value: &T,
-        f: impl FnOnce(&mut Self) -> U,
+        f: impl FnOnce(&mut CtxMapView<S>) -> U,
     ) -> U {
         let index = *key.index;
         if self.0.ptrs.len() <= index {
