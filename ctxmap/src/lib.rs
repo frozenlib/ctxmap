@@ -278,6 +278,7 @@ where
     }
 }
 
+#[doc(hidden)]
 pub mod helpers {
     pub use once_cell::sync::Lazy;
     use std::sync::atomic::{AtomicUsize, Ordering};
