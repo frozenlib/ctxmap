@@ -1,5 +1,5 @@
 use ctxmap::CtxMap;
-use std::fmt::Display;
+use std::{fmt::Display, mem::swap};
 
 ctxmap::schema!(Schema);
 ctxmap::key!(Schema { KEY_X: u8 = 10 });
@@ -92,4 +92,31 @@ fn in_func_key() {
     ctxmap::key!(Schema { KEY_A: u8 = 99 });
     let m = CtxMap::new();
     assert_eq!(m[&KEY_A], 99);
+}
+
+#[test]
+fn swap_safe() {
+    let mut m0 = CtxMap::new();
+    let mut m1 = CtxMap::new();
+
+    assert_eq!(m1[&KEY_X], 10);
+    m0.with(&KEY_X, &20, |m0| {
+        swap(m0, &mut m1);
+    });
+    assert_eq!(m1[&KEY_X], 10);
+}
+
+#[test]
+fn swap_safe_2() {
+    let mut m0 = CtxMap::new();
+    let mut m1 = CtxMap::new();
+
+    assert_eq!(m1[&KEY_X], 10);
+    m0.with(&KEY_X, &20, |m0| {
+        m1.with(&KEY_X, &30, |m1| {
+            swap(m0, m1);
+        });
+        assert_eq!(m0[&KEY_X], 20);
+        assert_eq!(m1[&KEY_X], 10);
+    });
 }
