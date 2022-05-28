@@ -1,0 +1,20 @@
+error[E0277]: the type `&mut CtxMap<main::Schema>` may not be safely transferred across an unwind boundary
+   --> tests/compile_fail/unwind.rs:8:13
+    |
+8   |       let _ = catch_unwind(|| {
+    |  _____________^^^^^^^^^^^^_-
+    | |             |
+    | |             `&mut CtxMap<main::Schema>` may not be safely transferred across an unwind boundary
+9   | |         m.with(&KEY_A, &2, |m| {
+10  | |             panic!("");
+11  | |         });
+12  | |     });
+    | |_____- within this `[closure@$DIR/tests/compile_fail/unwind.rs:8:26: 12:6]`
+    |
+    = help: within `[closure@$DIR/tests/compile_fail/unwind.rs:8:26: 12:6]`, the trait `UnwindSafe` is not implemented for `&mut CtxMap<main::Schema>`
+    = note: required because it appears within the type `[closure@$DIR/tests/compile_fail/unwind.rs:8:26: 12:6]`
+note: required by a bound in `catch_unwind`
+   --> $RUST/std/src/panic.rs
+    |
+    | pub fn catch_unwind<F: FnOnce() -> R + UnwindSafe, R>(f: F) -> Result<R> {
+    |                                        ^^^^^^^^^^ required by this bound in `catch_unwind`
