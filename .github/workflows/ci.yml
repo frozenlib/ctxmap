@@ -11,8 +11,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Rustup
+      - name: Rustup update
         run: rustup update stable
+      - name: Install rust-src
+        run: rustup component add rust-src
       - name: Cargo version
         run: cargo --version
       - name: Build
