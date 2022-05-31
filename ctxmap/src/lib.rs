@@ -7,7 +7,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! ctxmap = "0.3.0"
+//! ctxmap = "0.4.0"
 //! ```
 //!
 //! ## Example
