@@ -20,6 +20,7 @@
 //!     KEY_DYN: dyn std::fmt::Display = 10,
 //!     KEY_STR: str = "abc",
 //!     KEY_STRING: str = format!("abc-{}", 10),
+//!     mut KEY_MUT: u32 = 30,
 //! });
 //!
 //! let mut m = ctxmap::CtxMap::new();
@@ -31,8 +32,18 @@
 //! m.with(&KEY_INT, &20, |m| {
 //!     assert_eq!(m[&KEY_INT], 20);
 //! });
-//!
 //! assert_eq!(m[&KEY_INT], 10);
+//!
+//! assert_eq!(m[&KEY_MUT], 30);
+//! m[&KEY_MUT] = 40;
+//! assert_eq!(m[&KEY_MUT], 40);
+//!
+//! m.with_mut(&KEY_MUT, &mut 50, |m| {
+//!     assert_eq!(m[&KEY_MUT], 50);
+//!     m[&KEY_MUT] = 60;
+//!     assert_eq!(m[&KEY_MUT], 60);
+//! });
+//! assert_eq!(m[&KEY_MUT], 40);
 //! ```
 // #![include_doc("../../README.md", end("## License"))]
 
