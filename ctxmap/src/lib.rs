@@ -420,8 +420,12 @@ where
 
 #[doc(hidden)]
 pub mod helpers {
+    use crate::Schema;
     pub use once_cell::sync::Lazy;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::{
+        ops::Deref,
+        sync::atomic::{AtomicUsize, Ordering},
+    };
 
     pub struct SchemaData {
         next: AtomicUsize,
@@ -435,6 +439,34 @@ pub mod helpers {
         }
         pub(crate) fn push_key(&self) -> usize {
             self.next.fetch_add(1, Ordering::SeqCst)
+        }
+    }
+
+    pub struct Key<S: Schema, T: ?Sized + 'static, const MUT: bool = false>(
+        Lazy<crate::Key<S, T, MUT>>,
+    );
+    pub struct KeyMut<S: Schema, T: ?Sized + 'static>(Lazy<crate::KeyMut<S, T>>);
+
+    impl<S: Schema, T: ?Sized + 'static> Key<S, T> {
+        pub const fn new(f: fn() -> crate::Key<S, T>) -> Self {
+            Self(Lazy::new(f))
+        }
+    }
+    impl<S: Schema, T: ?Sized + 'static> Deref for Key<S, T> {
+        type Target = crate::Key<S, T>;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+    impl<S: Schema, T: ?Sized + 'static> KeyMut<S, T> {
+        pub const fn new(f: fn() -> crate::KeyMut<S, T>) -> Self {
+            Self(Lazy::new(f))
+        }
+    }
+    impl<S: Schema, T: ?Sized + 'static> Deref for KeyMut<S, T> {
+        type Target = crate::KeyMut<S, T>;
+        fn deref(&self) -> &Self::Target {
+            &self.0
         }
     }
 }
@@ -513,22 +545,22 @@ macro_rules! schema {
 macro_rules! key {
     ($schema:ty { }) => { };
     ($schema:ty { $vis:vis $id:ident: $type:ty }) => {
-        $vis static $id: $crate::helpers::Lazy<$crate::Key<$schema, $type>> =
-            $crate::helpers::Lazy::new(|| <$schema as $crate::Schema>::key());
+        $vis static $id: $crate::helpers::Key<$schema, $type> =
+            $crate::helpers::Key::new(|| <$schema as $crate::Schema>::key());
     };
     ($schema:ty { $vis:vis mut $id:ident: $type:ty }) => {
-        $vis static $id: $crate::helpers::Lazy<$crate::KeyMut<$schema, $type>> =
-            $crate::helpers::Lazy::new(|| <$schema as $crate::Schema>::key_mut());
+        $vis static $id: $crate::helpers::KeyMut<$schema, $type> =
+            $crate::helpers::KeyMut::new(|| <$schema as $crate::Schema>::key_mut());
     };
     ($schema:ty { $vis:vis $id:ident: $type:ty = $init:expr }) => {
-        $vis static $id: $crate::helpers::Lazy<$crate::Key<$schema, $type>> =
-            $crate::helpers::Lazy::new(|| <$schema as $crate::Schema>::key_with_default::<_, _, _, $type>(
+        $vis static $id: $crate::helpers::Key<$schema, $type> =
+            $crate::helpers::Key::new(|| <$schema as $crate::Schema>::key_with_default::<_, _, _, $type>(
                 || $init,
                 |x| x));
     };
     ($schema:ty { $vis:vis mut $id:ident: $type:ty = $init:expr }) => {
-        $vis static $id: $crate::helpers::Lazy<$crate::KeyMut<$schema, $type>> =
-            $crate::helpers::Lazy::new(|| <$schema as $crate::Schema>::key_mut_with_default::<_, _, _, _, $type>(
+        $vis static $id: $crate::helpers::KeyMut<$schema, $type> =
+            $crate::helpers::KeyMut::new(|| <$schema as $crate::Schema>::key_mut_with_default::<_, _, _, _, $type>(
                 || $init,
                 |x| x,
                 |x| x));
