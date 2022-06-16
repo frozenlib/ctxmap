@@ -109,6 +109,25 @@ impl<S: Schema> CtxMap<S> {
         self.view().with(key, value, f)
     }
 
+    /// Sets a mutable value corresponding to the key only while `f` is being called.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// ctxmap::schema!(S);
+    /// ctxmap::key!(S { mut KEY_A: u16 = 20 });
+    ///
+    /// let mut m = ctxmap::CtxMap::new();
+    /// assert_eq!(m[&KEY_A], 20);
+    /// m[&KEY_A] = 25;
+    /// assert_eq!(m[&KEY_A], 25);
+    /// m.with_mut(&KEY_A, &mut 30, |m| {
+    ///     assert_eq!(m[&KEY_A], 30);
+    ///     m[&KEY_A] = 35;
+    ///     assert_eq!(m[&KEY_A], 35);
+    /// });
+    /// assert_eq!(m[&KEY_A], 25);
+    /// ```
     pub fn with_mut<T: ?Sized + 'static, U, const MUT: bool>(
         &mut self,
         key: &'static Key<S, T, MUT>,
@@ -161,6 +180,22 @@ impl<S: Schema> CtxMap<S> {
             }
         }
     }
+
+    /// Returns a mutable reference to the value corresponding to the key.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// ctxmap::schema!(S);
+    /// ctxmap::key!(S { mut KEY_A: u16 });
+    ///
+    /// let mut m = ctxmap::CtxMap::new();
+    /// assert_eq!(m.get_mut(&KEY_A), None);
+    /// m.with_mut(&KEY_A, &mut 10, |m| {
+    ///     assert_eq!(m.get_mut(&KEY_A), Some(&mut 10));
+    /// });
+    /// assert_eq!(m.get_mut(&KEY_A), None);
+    /// ```
     pub fn get_mut<T: ?Sized>(&mut self, key: &'static KeyMut<S, T>) -> Option<&mut T> {
         let index = key.index;
         unsafe {
@@ -223,23 +258,7 @@ pub struct CtxMapView<'a, S: Schema>(&'a mut CtxMap<S>);
 impl<'a, S: Schema> CtxMapView<'a, S> {
     /// Sets a value to `CtxMap` only while `f` is being called.
     ///
-    /// # Example
-    ///
-    /// ```
-    /// ctxmap::schema!(S);
-    /// ctxmap::key!(S { KEY_A: u16 = 20 });
-    ///
-    /// let mut m = ctxmap::CtxMap::new();
-    /// assert_eq!(m[&KEY_A], 20);
-    /// m.with(&KEY_A, &30, |m| {
-    ///     assert_eq!(m[&KEY_A], 30);
-    ///     m.with(&KEY_A, &40, |m| {
-    ///        assert_eq!(m[&KEY_A], 40);
-    ///    });
-    ///    assert_eq!(m[&KEY_A], 30);
-    /// });
-    /// assert_eq!(m[&KEY_A], 20);
-    /// ```
+    /// See [`CtxMap::with`] for more details.
     pub fn with<T: ?Sized + 'static, U>(
         &mut self,
         key: &'static Key<S, T>,
@@ -250,6 +269,9 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
         self.with_impl(key, ptr, f)
     }
 
+    /// Sets a mutable value to `CtxMap` only while `f` is being called.
+    ///
+    /// See [`CtxMap::with_mut`] for more details.
     pub fn with_mut<T: ?Sized + 'static, U, const MUT: bool>(
         &mut self,
         key: &'static Key<S, T, MUT>,
@@ -282,9 +304,16 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
         CtxMapView(self.0)
     }
 
+    /// Returns a reference to the value corresponding to the key.
+    ///
+    /// See [`CtxMap::get`] for more details.
     pub fn get<T: ?Sized, const MUT: bool>(&self, key: &'static Key<S, T, MUT>) -> Option<&T> {
         self.0.get(key)
     }
+
+    /// Returns a mutable reference to the value corresponding to the key.
+    ///
+    /// See [`CtxMap::get_mut`] for more details.
     pub fn get_mut<T: ?Sized>(&mut self, key: &'static KeyMut<S, T>) -> Option<&mut T> {
         self.0.get_mut(key)
     }
@@ -530,6 +559,18 @@ macro_rules! schema {
 ///     KEY_3: str = String::new(),
 ///     KEY_4: dyn Display = 10,
 ///     KEY_5: dyn Display = "xyz",
+/// });
+/// ```
+///
+/// You can specify mutability.
+///
+/// Keys with `mut` can be used in [`with_mut`](CtxMap::with_mut), [`get_mut`](CtxMap::get_mut) and [`index_mut`](CtxMap::index_mut).
+///
+/// ```
+/// ctxmap::schema!(S);
+/// ctxmap::key!(S {
+///     mut KEY_1: u8,
+///     mut KEY_2: String,
 /// });
 /// ```
 ///
