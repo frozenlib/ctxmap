@@ -75,6 +75,15 @@ fn with_mut() {
 }
 
 #[test]
+fn with_mut_key_immut() {
+    let mut m = CtxMap::new();
+    m.with_mut(&KEY_X, &mut 20, |m| {
+        assert_eq!(m[&KEY_X], 20);
+    });
+    assert_eq!(m[&KEY_X], 10);
+}
+
+#[test]
 fn with_nest() {
     let mut m = CtxMap::new();
     m.with(&KEY_X, &20, |m| {

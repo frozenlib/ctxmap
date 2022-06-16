@@ -110,9 +110,9 @@ impl<S: Schema> CtxMap<S> {
         self.view().with(key, value, f)
     }
 
-    pub fn with_mut<T: ?Sized + 'static, U>(
+    pub fn with_mut<T: ?Sized + 'static, U, const MUT: bool>(
         &mut self,
-        key: &'static KeyMut<S, T>,
+        key: &'static Key<S, T, MUT>,
         value: &mut T,
         f: impl FnOnce(&mut CtxMapView<S>) -> U,
     ) -> U {
@@ -247,22 +247,24 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
         value: &T,
         f: impl FnOnce(&mut CtxMapView<S>) -> U,
     ) -> U {
-        let index = *key.index;
-        if self.0.ptrs.len() <= index {
-            self.0.ptrs.resize_with(index + 1, || None);
-        }
-        let old = self.0.ptrs[index];
         let ptr: *const T = value;
-        self.0.ptrs[index] = Some(&ptr);
-        let retval = f(self);
-        self.0.ptrs[index] = old;
-        retval
+        self.with_impl(key, ptr, f)
     }
 
-    pub fn with_mut<T: ?Sized + 'static, U>(
+    pub fn with_mut<T: ?Sized + 'static, U, const MUT: bool>(
         &mut self,
-        key: &'static KeyMut<S, T>,
+        key: &'static Key<S, T, MUT>,
         value: &mut T,
+        f: impl FnOnce(&mut CtxMapView<S>) -> U,
+    ) -> U {
+        let ptr: *mut T = value;
+        self.with_impl(key, ptr, f)
+    }
+
+    fn with_impl<T: ?Sized + 'static, U, P: 'static, const MUT: bool>(
+        &mut self,
+        key: &'static Key<S, T, MUT>,
+        ptr: P,
         f: impl FnOnce(&mut CtxMapView<S>) -> U,
     ) -> U {
         let index = *key.index;
@@ -270,7 +272,6 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
             self.0.ptrs.resize_with(index + 1, || None);
         }
         let old = self.0.ptrs[index];
-        let ptr: *mut T = value;
         self.0.ptrs[index] = Some(&ptr);
         let retval = f(self);
         self.0.ptrs[index] = old;
