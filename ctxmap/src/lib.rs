@@ -450,7 +450,7 @@ where
 #[doc(hidden)]
 pub mod helpers {
     use crate::Schema;
-    pub use once_cell::sync::Lazy;
+    use once_cell::sync::Lazy;
     use std::{
         ops::Deref,
         sync::atomic::{AtomicUsize, Ordering},
