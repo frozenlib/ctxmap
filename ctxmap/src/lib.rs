@@ -48,7 +48,6 @@
 // #![include_doc("../../README.md", end("## License"))]
 
 use helpers::*;
-use once_cell::sync::Lazy;
 use std::{
     any::Any,
     cell::UnsafeCell,
@@ -140,7 +139,7 @@ impl<S: Schema> CtxMap<S> {
     /// assert_eq!(m.get(&KEY_A), None);
     /// ```
     pub fn get<T: ?Sized, const MUT: bool>(&self, key: &'static Key<S, T, MUT>) -> Option<&T> {
-        let index = *key.index;
+        let index = key.index;
         unsafe {
             if let Some(Some(p)) = self.ptrs.get(index) {
                 if let Some(p) = <dyn Any>::downcast_ref::<*const T>(&**p) {
@@ -163,7 +162,7 @@ impl<S: Schema> CtxMap<S> {
         }
     }
     pub fn get_mut<T: ?Sized>(&mut self, key: &'static KeyMut<S, T>) -> Option<&mut T> {
-        let index = *key.index;
+        let index = key.index;
         unsafe {
             if let Some(Some(p)) = self.ptrs.get(index) {
                 Some(&mut **<dyn Any>::downcast_ref::<*mut T>(&**p).unwrap())
@@ -267,7 +266,7 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
         ptr: P,
         f: impl FnOnce(&mut CtxMapView<S>) -> U,
     ) -> U {
-        let index = *key.index;
+        let index = key.index;
         if self.0.ptrs.len() <= index {
             self.0.ptrs.resize_with(index + 1, || None);
         }
@@ -317,7 +316,7 @@ where
 /// Use [`key`] macro to create `Key`.
 pub struct Key<S: Schema, T: ?Sized + 'static, const MUT: bool = false> {
     schema: PhantomData<S>,
-    index: Lazy<usize>,
+    index: usize,
     data: Option<Box<dyn KeyData<T>>>,
 }
 pub type KeyMut<S, T> = Key<S, T, true>;
@@ -337,14 +336,14 @@ pub trait Schema: 'static + Sized {
     fn key<T: ?Sized>() -> Key<Self, T> {
         Key {
             schema: PhantomData,
-            index: Lazy::new(|| Self::data().push_key()),
+            index: Self::data().push_key(),
             data: None,
         }
     }
     fn key_mut<T: ?Sized>() -> KeyMut<Self, T> {
         Key {
             schema: PhantomData,
-            index: Lazy::new(|| Self::data().push_key()),
+            index: Self::data().push_key(),
             data: None,
         }
     }
@@ -362,7 +361,7 @@ pub trait Schema: 'static + Sized {
 
         Key {
             schema: PhantomData,
-            index: Lazy::new(|| Self::data().push_key()),
+            index: Self::data().push_key(),
             data: Some(Box::new(KeyDataValue {
                 init,
                 to_ref,
@@ -384,7 +383,7 @@ pub trait Schema: 'static + Sized {
     {
         Key {
             schema: PhantomData,
-            index: Lazy::new(|| Self::data().push_key()),
+            index: Self::data().push_key(),
             data: Some(Box::new(KeyDataValue {
                 init,
                 to_ref,
