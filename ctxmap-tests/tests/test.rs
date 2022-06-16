@@ -22,6 +22,19 @@ ctxmap::key!(Schema {
     KEY_STRING: str = format!("abc-{}", 1)
 });
 
+ctxmap::key!(Schema {
+    mut MUT_0: u8,
+    mut MUT_1: u8 = 10,
+});
+
+ctxmap::key!(Schema {
+    TEST_FOR_SUBSEQUENT_ITEM: u8,
+    ITEM_1: u8,
+    ITEM_2: u8 = 10,
+    mut ITEM_3: u8,
+    mut ITEM_4: u8 = 10,
+});
+
 mod mod_a {
     ctxmap::schema!(pub ModASchema);
 }
@@ -46,6 +59,17 @@ fn with() {
     let mut m = CtxMap::new();
     m.with(&KEY_X, &20, |m| {
         assert_eq!(m[&KEY_X], 20);
+    });
+    assert_eq!(m[&KEY_X], 10);
+}
+
+#[test]
+fn with_mut() {
+    let mut m = CtxMap::new();
+    m.with_mut(&MUT_1, &mut 20, |m| {
+        assert_eq!(m[&MUT_1], 20);
+        m[&MUT_1] = 30;
+        assert_eq!(m[&MUT_1], 30);
     });
     assert_eq!(m[&KEY_X], 10);
 }

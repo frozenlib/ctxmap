@@ -42,7 +42,7 @@ use std::{
     any::Any,
     cell::RefCell,
     marker::PhantomData,
-    ops::{Deref, Index},
+    ops::{Index, IndexMut},
 };
 
 /// A collection that can store references of different types and lifetimes.
@@ -99,6 +99,15 @@ impl<S: Schema> CtxMap<S> {
         self.view().with(key, value, f)
     }
 
+    pub fn with_mut<T: ?Sized + 'static, U>(
+        &mut self,
+        key: &'static KeyMut<S, T>,
+        value: &mut T,
+        f: impl FnOnce(&mut CtxMapView<S>) -> U,
+    ) -> U {
+        self.view().with_mut(key, value, f)
+    }
+
     /// Get [`CtxMapView`] that references `self`.
     pub fn view(&mut self) -> CtxMapView<S> {
         CtxMapView(self)
@@ -119,25 +128,51 @@ impl<S: Schema> CtxMap<S> {
     /// });
     /// assert_eq!(m.get(&KEY_A), None);
     /// ```
-    pub fn get<T: ?Sized>(&self, key: &'static Key<S, T>) -> Option<&T> {
+    pub fn get<T: ?Sized, const MUT: bool>(&self, key: &'static Key<S, T, MUT>) -> Option<&T> {
         let index = *key.index;
         if let Some(Some(p)) = self.ptrs.get(index) {
-            unsafe { Some(&**<dyn Any>::downcast_ref::<*const T>(&**p).unwrap()) }
+            unsafe {
+                if let Some(p) = <dyn Any>::downcast_ref::<*const T>(&**p) {
+                    Some(&**p)
+                } else if let Some(p) = <dyn Any>::downcast_ref::<*mut T>(&**p) {
+                    Some(&**p)
+                } else {
+                    unreachable!()
+                }
+            }
         } else {
-            let data = key.data.as_ref()?;
+            let data = key.data.as_ref()?.as_ref();
             loop {
                 if let Some(Some(value)) = self.values.borrow().get(index) {
                     let p: *const dyn Any = value.as_ref();
                     return Some(data.get(unsafe { &*p }));
                 }
-                let init = data.init();
-                let mut values = self.values.borrow_mut();
-                if values.len() <= index {
-                    values.resize_with(index + 1, || None);
-                }
-                values[index] = Some(init);
+                self.init_value(index, data);
             }
         }
+    }
+    pub fn get_mut<T: ?Sized>(&mut self, key: &'static KeyMut<S, T>) -> Option<&mut T> {
+        let index = *key.index;
+        if let Some(Some(p)) = self.ptrs.get(index) {
+            unsafe { Some(&mut **<dyn Any>::downcast_ref::<*mut T>(&**p).unwrap()) }
+        } else {
+            let data = key.data.as_ref()?.as_ref();
+            loop {
+                if let Some(Some(value)) = self.values.borrow_mut().get_mut(index) {
+                    let p: *mut dyn Any = value.as_mut();
+                    return Some(data.get_mut(unsafe { &mut *p }));
+                }
+                self.init_value(index, data);
+            }
+        }
+    }
+    fn init_value<T: ?Sized>(&self, index: usize, data: &dyn KeyData<T>) {
+        let init = data.init();
+        let mut values = self.values.borrow_mut();
+        if values.len() <= index {
+            values.resize_with(index + 1, || None);
+        }
+        values[index] = Some(init);
     }
 }
 
@@ -146,15 +181,24 @@ impl<S: Schema> Default for CtxMap<S> {
         Self::new()
     }
 }
-impl<S, T> Index<&'static Key<S, T>> for CtxMap<S>
+impl<S, T, const MUT: bool> Index<&'static Key<S, T, MUT>> for CtxMap<S>
 where
     S: Schema,
     T: ?Sized + 'static,
 {
     type Output = T;
 
-    fn index(&self, index: &'static Key<S, T>) -> &Self::Output {
+    fn index(&self, index: &'static Key<S, T, MUT>) -> &Self::Output {
         self.get(index).expect("no entry found for key")
+    }
+}
+impl<S, T> IndexMut<&'static KeyMut<S, T>> for CtxMap<S>
+where
+    S: Schema,
+    T: ?Sized + 'static,
+{
+    fn index_mut(&mut self, index: &'static KeyMut<S, T>) -> &mut Self::Output {
+        self.get_mut(index).expect("no entry found for key")
     }
 }
 
@@ -202,30 +246,71 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
         retval
     }
 
+    pub fn with_mut<T: ?Sized + 'static, U>(
+        &mut self,
+        key: &'static KeyMut<S, T>,
+        value: &mut T,
+        f: impl FnOnce(&mut CtxMapView<S>) -> U,
+    ) -> U {
+        let index = *key.index;
+        if self.0.ptrs.len() <= index {
+            self.0.ptrs.resize_with(index + 1, || None);
+        }
+        let old = self.0.ptrs[index];
+        let ptr: *mut T = value;
+        self.0.ptrs[index] = Some(&ptr);
+        let retval = f(self);
+        self.0.ptrs[index] = old;
+        retval
+    }
+
     /// Return `CtxMapView` with modified lifetime.
     pub fn view(&mut self) -> CtxMapView<S> {
         CtxMapView(self.0)
     }
-}
-impl<'a, S: Schema> Deref for CtxMapView<'a, S> {
-    type Target = CtxMap<S>;
 
-    fn deref(&self) -> &Self::Target {
-        self.0
+    pub fn get<T: ?Sized, const MUT: bool>(&self, key: &'static Key<S, T, MUT>) -> Option<&T> {
+        self.0.get(key)
+    }
+    pub fn get_mut<T: ?Sized>(&mut self, key: &'static KeyMut<S, T>) -> Option<&mut T> {
+        self.0.get_mut(key)
+    }
+}
+
+impl<'a, S, T, const MUT: bool> Index<&'static Key<S, T, MUT>> for CtxMapView<'a, S>
+where
+    S: Schema,
+    T: ?Sized + 'static,
+{
+    type Output = T;
+
+    fn index(&self, index: &'static Key<S, T, MUT>) -> &Self::Output {
+        &self.0[index]
+    }
+}
+impl<'a, S, T> IndexMut<&'static KeyMut<S, T>> for CtxMapView<'a, S>
+where
+    S: Schema,
+    T: ?Sized + 'static,
+{
+    fn index_mut(&mut self, index: &'static KeyMut<S, T>) -> &mut Self::Output {
+        &mut self.0[index]
     }
 }
 
 /// A key for [`CtxMap`].
 ///
 /// Use [`key`] macro to create `Key`.
-pub struct Key<S: Schema, T: ?Sized + 'static> {
+pub struct Key<S: Schema, T: ?Sized + 'static, const MUT: bool = false> {
     schema: PhantomData<S>,
     index: Lazy<usize>,
     data: Option<Box<dyn KeyData<T>>>,
 }
+pub type KeyMut<S, T> = Key<S, T, true>;
 
 trait KeyData<T: ?Sized>: Send + Sync {
     fn get<'a>(&self, value: &'a dyn Any) -> &'a T;
+    fn get_mut<'a>(&self, value: &'a mut dyn Any) -> &'a mut T;
     fn init(&self) -> Box<dyn Any>;
 }
 
@@ -242,6 +327,13 @@ pub trait Schema: 'static + Sized {
             data: None,
         }
     }
+    fn key_mut<T: ?Sized>() -> KeyMut<Self, T> {
+        Key {
+            schema: PhantomData,
+            index: Lazy::new(|| Self::data().push_key()),
+            data: None,
+        }
+    }
 
     fn key_with_default<Init, ToRef, V, T>(init: Init, to_ref: ToRef) -> Key<Self, T>
     where
@@ -250,28 +342,63 @@ pub trait Schema: 'static + Sized {
         V: 'static,
         T: ?Sized,
     {
+        fn to_mut_unreachable<V, T: ?Sized>(_: &mut V) -> &mut T {
+            unreachable!()
+        }
+
         Key {
             schema: PhantomData,
             index: Lazy::new(|| Self::data().push_key()),
-            data: Some(Box::new(KeyDataValue { init, to_ref })),
+            data: Some(Box::new(KeyDataValue {
+                init,
+                to_ref,
+                to_mut: to_mut_unreachable,
+            })),
+        }
+    }
+    fn key_mut_with_default<Init, ToRef, ToMut, V, T>(
+        init: Init,
+        to_ref: ToRef,
+        to_mut: ToMut,
+    ) -> KeyMut<Self, T>
+    where
+        Init: Send + Sync + Fn() -> V + 'static,
+        ToRef: Send + Sync + Fn(&V) -> &T + 'static,
+        ToMut: Send + Sync + Fn(&mut V) -> &mut T + 'static,
+        V: 'static,
+        T: ?Sized,
+    {
+        Key {
+            schema: PhantomData,
+            index: Lazy::new(|| Self::data().push_key()),
+            data: Some(Box::new(KeyDataValue {
+                init,
+                to_ref,
+                to_mut,
+            })),
         }
     }
 }
 
-struct KeyDataValue<Init, ToRef> {
+struct KeyDataValue<Init, ToRef, ToMut> {
     init: Init,
     to_ref: ToRef,
+    to_mut: ToMut,
 }
 
-impl<Init, ToRef, V, T> KeyData<T> for KeyDataValue<Init, ToRef>
+impl<Init, ToRef, ToMut, V, T> KeyData<T> for KeyDataValue<Init, ToRef, ToMut>
 where
     Init: Send + Sync + Fn() -> V,
     ToRef: Send + Sync + Fn(&V) -> &T,
+    ToMut: Send + Sync + Fn(&mut V) -> &mut T,
     V: 'static,
     T: ?Sized,
 {
     fn get<'a>(&self, value: &'a dyn Any) -> &'a T {
         (self.to_ref)(<dyn Any>::downcast_ref::<V>(value).unwrap())
+    }
+    fn get_mut<'a>(&self, value: &'a mut dyn Any) -> &'a mut T {
+        (self.to_mut)(<dyn Any>::downcast_mut::<V>(value).unwrap())
     }
     fn init(&self) -> Box<dyn Any> {
         Box::new((self.init)())
@@ -376,18 +503,38 @@ macro_rules! key {
         $vis static $id: $crate::helpers::Lazy<$crate::Key<$schema, $type>> =
             $crate::helpers::Lazy::new(|| <$schema as $crate::Schema>::key());
     };
+    ($schema:ty { $vis:vis mut $id:ident: $type:ty }) => {
+        $vis static $id: $crate::helpers::Lazy<$crate::KeyMut<$schema, $type>> =
+            $crate::helpers::Lazy::new(|| <$schema as $crate::Schema>::key_mut());
+    };
     ($schema:ty { $vis:vis $id:ident: $type:ty = $init:expr }) => {
         $vis static $id: $crate::helpers::Lazy<$crate::Key<$schema, $type>> =
             $crate::helpers::Lazy::new(|| <$schema as $crate::Schema>::key_with_default::<_, _, _, $type>(
                 || $init,
                 |x| x));
     };
+    ($schema:ty { $vis:vis mut $id:ident: $type:ty = $init:expr }) => {
+        $vis static $id: $crate::helpers::Lazy<$crate::KeyMut<$schema, $type>> =
+            $crate::helpers::Lazy::new(|| <$schema as $crate::Schema>::key_mut_with_default::<_, _, _, _, $type>(
+                || $init,
+                |x| x,
+                |x| x));
+    };
     ($schema:ty { $vis:vis $id:ident: $type:ty, $($tt:tt)* }) => {
         $crate::key!($schema { $vis $id: $type });
+        $crate::key!($schema { $($tt)* });
+    };
+    ($schema:ty { $vis:vis mut $id:ident: $type:ty, $($tt:tt)* }) => {
+        $crate::key!($schema { $vis mut $id: $type });
         $crate::key!($schema { $($tt)* });
     };
     ($schema:ty { $vis:vis $id:ident: $type:ty = $init:expr, $($tt:tt)* }) => {
         $crate::key!($schema { $vis $id: $type = $init });
         $crate::key!($schema { $($tt)* });
     };
+    ($schema:ty { $vis:vis mut $id:ident: $type:ty = $init:expr, $($tt:tt)* }) => {
+        $crate::key!($schema { $vis mut $id: $type = $init });
+        $crate::key!($schema { $($tt)* });
+    };
+
 }
