@@ -40,7 +40,7 @@ use helpers::*;
 use once_cell::sync::Lazy;
 use std::{
     any::Any,
-    cell::RefCell,
+    cell::UnsafeCell,
     marker::PhantomData,
     ops::{Index, IndexMut},
 };
@@ -49,7 +49,7 @@ use std::{
 pub struct CtxMap<S: Schema> {
     schema: PhantomData<S>,
     ptrs: Vec<Option<*const dyn Any>>,
-    values: RefCell<Vec<Option<Box<dyn Any>>>>,
+    values: UnsafeCell<Vec<Option<Box<dyn Any>>>>,
 }
 
 impl<S: Schema> CtxMap<S> {
@@ -70,7 +70,7 @@ impl<S: Schema> CtxMap<S> {
     pub fn new() -> Self {
         Self {
             schema: PhantomData,
-            values: RefCell::new(Vec::new()),
+            values: UnsafeCell::new(Vec::new()),
             ptrs: Vec::new(),
         }
     }
@@ -130,8 +130,8 @@ impl<S: Schema> CtxMap<S> {
     /// ```
     pub fn get<T: ?Sized, const MUT: bool>(&self, key: &'static Key<S, T, MUT>) -> Option<&T> {
         let index = *key.index;
-        if let Some(Some(p)) = self.ptrs.get(index) {
-            unsafe {
+        unsafe {
+            if let Some(Some(p)) = self.ptrs.get(index) {
                 if let Some(p) = <dyn Any>::downcast_ref::<*const T>(&**p) {
                     Some(&**p)
                 } else if let Some(p) = <dyn Any>::downcast_ref::<*mut T>(&**p) {
@@ -139,36 +139,38 @@ impl<S: Schema> CtxMap<S> {
                 } else {
                     unreachable!()
                 }
-            }
-        } else {
-            let data = key.data.as_ref()?.as_ref();
-            loop {
-                if let Some(Some(value)) = self.values.borrow().get(index) {
-                    let p: *const dyn Any = value.as_ref();
-                    return Some(data.get(unsafe { &*p }));
+            } else {
+                let data = key.data.as_ref()?.as_ref();
+                loop {
+                    if let Some(Some(value)) = (*self.values.get()).get(index) {
+                        let p: *const dyn Any = value.as_ref();
+                        return Some(data.get(&*p));
+                    }
+                    self.init_value(index, data);
                 }
-                self.init_value(index, data);
             }
         }
     }
     pub fn get_mut<T: ?Sized>(&mut self, key: &'static KeyMut<S, T>) -> Option<&mut T> {
         let index = *key.index;
-        if let Some(Some(p)) = self.ptrs.get(index) {
-            unsafe { Some(&mut **<dyn Any>::downcast_ref::<*mut T>(&**p).unwrap()) }
-        } else {
-            let data = key.data.as_ref()?.as_ref();
-            loop {
-                if let Some(Some(value)) = self.values.borrow_mut().get_mut(index) {
-                    let p: *mut dyn Any = value.as_mut();
-                    return Some(data.get_mut(unsafe { &mut *p }));
+        unsafe {
+            if let Some(Some(p)) = self.ptrs.get(index) {
+                Some(&mut **<dyn Any>::downcast_ref::<*mut T>(&**p).unwrap())
+            } else {
+                let data = key.data.as_ref()?.as_ref();
+                loop {
+                    if let Some(Some(value)) = (*self.values.get()).get_mut(index) {
+                        let p: *mut dyn Any = value.as_mut();
+                        return Some(data.get_mut(&mut *p));
+                    }
+                    self.init_value(index, data);
                 }
-                self.init_value(index, data);
             }
         }
     }
-    fn init_value<T: ?Sized>(&self, index: usize, data: &dyn KeyData<T>) {
+    unsafe fn init_value<T: ?Sized>(&self, index: usize, data: &dyn KeyData<T>) {
         let init = data.init();
-        let mut values = self.values.borrow_mut();
+        let values = &mut *self.values.get();
         if values.len() <= index {
             values.resize_with(index + 1, || None);
         }
