@@ -48,6 +48,7 @@
 // #![include_doc("../../README.md", end("## License"))]
 
 use helpers::*;
+use once_cell::sync::Lazy;
 use std::{
     any::Any,
     cell::UnsafeCell,
@@ -158,6 +159,7 @@ impl<S: Schema> CtxMap<S> {
     /// assert_eq!(m.get(&KEY_A), None);
     /// ```
     pub fn get<T: ?Sized, const MUT: bool>(&self, key: &'static Key<S, T, MUT>) -> Option<&T> {
+        let key = &*key.0;
         let index = key.index;
         unsafe {
             if let Some(Some(p)) = self.ptrs.get(index) {
@@ -197,6 +199,7 @@ impl<S: Schema> CtxMap<S> {
     /// assert_eq!(m.get_mut(&KEY_A), None);
     /// ```
     pub fn get_mut<T: ?Sized>(&mut self, key: &'static KeyMut<S, T>) -> Option<&mut T> {
+        let key = &*key.0;
         let index = key.index;
         unsafe {
             if let Some(Some(p)) = self.ptrs.get(index) {
@@ -288,6 +291,7 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
         ptr: P,
         f: impl FnOnce(&mut CtxMapView<S>) -> U,
     ) -> U {
+        let key = &*key.0;
         let index = key.index;
         if self.0.ptrs.len() <= index {
             self.0.ptrs.resize_with(index + 1, || None);
@@ -343,13 +347,8 @@ where
 /// A key for [`CtxMap`].
 ///
 /// Use [`key`] macro to create `Key`.
-pub struct Key<S: Schema, T: ?Sized + 'static, const MUT: bool = false> {
-    schema: PhantomData<S>,
-    index: usize,
-    data: Option<Box<dyn KeyData<T>>>,
-}
+pub struct Key<S: Schema, T: ?Sized + 'static, const MUT: bool = false>(Lazy<RawKey<S, T, MUT>>);
 pub type KeyMut<S, T> = Key<S, T, true>;
-
 trait KeyData<T: ?Sized>: Send + Sync {
     fn get<'a>(&self, value: &'a dyn Any) -> &'a T;
     fn get_mut<'a>(&self, value: &'a mut dyn Any) -> &'a mut T;
@@ -361,65 +360,6 @@ trait KeyData<T: ?Sized>: Send + Sync {
 /// Use [`schema`] macro to define a type that implement `Schema`.
 pub trait Schema: 'static + Sized {
     fn data() -> &'static SchemaData;
-
-    fn key<T: ?Sized>() -> Key<Self, T> {
-        Key {
-            schema: PhantomData,
-            index: Self::data().push_key(),
-            data: None,
-        }
-    }
-    fn key_mut<T: ?Sized>() -> KeyMut<Self, T> {
-        Key {
-            schema: PhantomData,
-            index: Self::data().push_key(),
-            data: None,
-        }
-    }
-
-    fn key_with_default<Init, ToRef, V, T>(init: Init, to_ref: ToRef) -> Key<Self, T>
-    where
-        Init: Send + Sync + Fn() -> V + 'static,
-        ToRef: Send + Sync + Fn(&V) -> &T + 'static,
-        V: 'static,
-        T: ?Sized,
-    {
-        fn to_mut_unreachable<V, T: ?Sized>(_: &mut V) -> &mut T {
-            unreachable!()
-        }
-
-        Key {
-            schema: PhantomData,
-            index: Self::data().push_key(),
-            data: Some(Box::new(KeyDataValue {
-                init,
-                to_ref,
-                to_mut: to_mut_unreachable,
-            })),
-        }
-    }
-    fn key_mut_with_default<Init, ToRef, ToMut, V, T>(
-        init: Init,
-        to_ref: ToRef,
-        to_mut: ToMut,
-    ) -> KeyMut<Self, T>
-    where
-        Init: Send + Sync + Fn() -> V + 'static,
-        ToRef: Send + Sync + Fn(&V) -> &T + 'static,
-        ToMut: Send + Sync + Fn(&mut V) -> &mut T + 'static,
-        V: 'static,
-        T: ?Sized,
-    {
-        Key {
-            schema: PhantomData,
-            index: Self::data().push_key(),
-            data: Some(Box::new(KeyDataValue {
-                init,
-                to_ref,
-                to_mut,
-            })),
-        }
-    }
 }
 
 struct KeyDataValue<Init, ToRef, ToMut> {
@@ -449,10 +389,10 @@ where
 
 #[doc(hidden)]
 pub mod helpers {
-    use crate::Schema;
+    use crate::{Key, KeyData, KeyDataValue, Schema};
     use once_cell::sync::Lazy;
     use std::{
-        ops::Deref,
+        marker::PhantomData,
         sync::atomic::{AtomicUsize, Ordering},
     };
 
@@ -471,32 +411,67 @@ pub mod helpers {
         }
     }
 
-    pub struct Key<S: Schema, T: ?Sized + 'static, const MUT: bool = false>(
-        Lazy<crate::Key<S, T, MUT>>,
-    );
-    pub struct KeyMut<S: Schema, T: ?Sized + 'static>(Lazy<crate::KeyMut<S, T>>);
+    pub struct RawKey<S: Schema, T: ?Sized + 'static, const MUT: bool = false> {
+        pub(crate) schema: PhantomData<S>,
+        pub(crate) index: usize,
+        pub(crate) data: Option<Box<dyn KeyData<T>>>,
+    }
+    pub type RawKeyMut<S, T> = RawKey<S, T, true>;
 
-    impl<S: Schema, T: ?Sized + 'static> Key<S, T> {
-        pub const fn new(f: fn() -> crate::Key<S, T>) -> Self {
-            Self(Lazy::new(f))
+    impl<S: Schema, T: ?Sized + 'static, const MUT: bool> RawKey<S, T, MUT> {
+        fn new(data: Option<Box<dyn KeyData<T>>>) -> Self {
+            Self {
+                schema: PhantomData,
+                index: S::data().push_key(),
+                data,
+            }
         }
     }
-    impl<S: Schema, T: ?Sized + 'static> Deref for Key<S, T> {
-        type Target = crate::Key<S, T>;
-        fn deref(&self) -> &Self::Target {
-            &self.0
+    impl<S: Schema, T: ?Sized + 'static> RawKey<S, T, false> {
+        pub fn new_with_default_immut<Init, ToRef, V>(init: Init, to_ref: ToRef) -> Self
+        where
+            Init: Send + Sync + Fn() -> V + 'static,
+            ToRef: Send + Sync + Fn(&V) -> &T + 'static,
+            V: 'static,
+        {
+            fn to_mut_unreachable<V, T: ?Sized>(_: &mut V) -> &mut T {
+                unreachable!()
+            }
+            Self::new(Some(Box::new(KeyDataValue {
+                init,
+                to_ref,
+                to_mut: to_mut_unreachable,
+            })))
         }
     }
-    impl<S: Schema, T: ?Sized + 'static> KeyMut<S, T> {
-        pub const fn new(f: fn() -> crate::KeyMut<S, T>) -> Self {
-            Self(Lazy::new(f))
+    impl<S: Schema, T: ?Sized + 'static> RawKey<S, T, true> {
+        pub fn new_with_default_mut<Init, ToRef, ToMut, V>(
+            init: Init,
+            to_ref: ToRef,
+            to_mut: ToMut,
+        ) -> Self
+        where
+            Init: Send + Sync + Fn() -> V + 'static,
+            ToRef: Send + Sync + Fn(&V) -> &T + 'static,
+            ToMut: Send + Sync + Fn(&mut V) -> &mut T + 'static,
+            V: 'static,
+        {
+            Self::new(Some(Box::new(KeyDataValue {
+                init,
+                to_ref,
+                to_mut,
+            })))
         }
     }
-    impl<S: Schema, T: ?Sized + 'static> Deref for KeyMut<S, T> {
-        type Target = crate::KeyMut<S, T>;
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
+
+    pub const fn new_key_without_default<S: Schema, T: ?Sized + 'static, const MUT: bool>(
+    ) -> Key<S, T, MUT> {
+        Key(Lazy::new(|| RawKey::new(None)))
+    }
+    pub const fn new_key<S: Schema, T: ?Sized + 'static, const MUT: bool>(
+        f: fn() -> RawKey<S, T, MUT>,
+    ) -> Key<S, T, MUT> {
+        Key(Lazy::new(f))
     }
 }
 
@@ -586,22 +561,20 @@ macro_rules! schema {
 macro_rules! key {
     ($schema:ty { }) => { };
     ($schema:ty { $vis:vis $id:ident: $type:ty }) => {
-        $vis static $id: $crate::helpers::Key<$schema, $type> =
-            $crate::helpers::Key::new(|| <$schema as $crate::Schema>::key());
+        $vis static $id: $crate::Key<$schema, $type> = $crate::helpers::new_key_without_default();
     };
     ($schema:ty { $vis:vis mut $id:ident: $type:ty }) => {
-        $vis static $id: $crate::helpers::KeyMut<$schema, $type> =
-            $crate::helpers::KeyMut::new(|| <$schema as $crate::Schema>::key_mut());
+        $vis static $id: $crate::KeyMut<$schema, $type> = $crate::helpers::new_key_without_default();
     };
     ($schema:ty { $vis:vis $id:ident: $type:ty = $init:expr }) => {
-        $vis static $id: $crate::helpers::Key<$schema, $type> =
-            $crate::helpers::Key::new(|| <$schema as $crate::Schema>::key_with_default::<_, _, _, $type>(
+        $vis static $id: $crate::Key<$schema, $type> =
+            $crate::helpers::new_key(|| $crate::helpers::RawKey::<_, $type>::new_with_default_immut(
                 || $init,
                 |x| x));
     };
     ($schema:ty { $vis:vis mut $id:ident: $type:ty = $init:expr }) => {
-        $vis static $id: $crate::helpers::KeyMut<$schema, $type> =
-            $crate::helpers::KeyMut::new(|| <$schema as $crate::Schema>::key_mut_with_default::<_, _, _, _, $type>(
+        $vis static $id: $crate::KeyMut<$schema, $type> =
+            $crate::helpers::new_key(|| $crate::helpers::RawKeyMut::<_, $type>::new_with_default_mut(
                 || $init,
                 |x| x,
                 |x| x));
