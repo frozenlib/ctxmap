@@ -579,20 +579,12 @@ macro_rules! key {
                 |x| x,
                 |x| x));
     };
-    ($schema:ty { $vis:vis $id:ident: $type:ty, $($tt:tt)* }) => {
-        $crate::key!($schema { $vis $id: $type });
+    ($schema:ty { $vis:vis $id:ident: $type:ty $(= $init:expr)?, $($tt:tt)* }) => {
+        $crate::key!($schema { $vis $id: $type $(= $init)? });
         $crate::key!($schema { $($tt)* });
     };
-    ($schema:ty { $vis:vis mut $id:ident: $type:ty, $($tt:tt)* }) => {
-        $crate::key!($schema { $vis mut $id: $type });
-        $crate::key!($schema { $($tt)* });
-    };
-    ($schema:ty { $vis:vis $id:ident: $type:ty = $init:expr, $($tt:tt)* }) => {
-        $crate::key!($schema { $vis $id: $type = $init });
-        $crate::key!($schema { $($tt)* });
-    };
-    ($schema:ty { $vis:vis mut $id:ident: $type:ty = $init:expr, $($tt:tt)* }) => {
-        $crate::key!($schema { $vis mut $id: $type = $init });
+    ($schema:ty { $vis:vis mut $id:ident: $type:ty $(= $init:expr)?, $($tt:tt)* }) => {
+        $crate::key!($schema { $vis mut $id: $type $(= $init)? });
         $crate::key!($schema { $($tt)* });
     };
 
