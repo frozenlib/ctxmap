@@ -428,7 +428,7 @@ pub mod helpers {
         }
     }
     impl<S: Schema, T: ?Sized + 'static> RawKey<S, T, false> {
-        pub fn new_with_default_immut<Init, ToRef, V>(init: Init, to_ref: ToRef) -> Self
+        pub fn new_with_default<Init, ToRef, V>(init: Init, to_ref: ToRef) -> Self
         where
             Init: Send + Sync + Fn() -> V + 'static,
             ToRef: Send + Sync + Fn(&V) -> &T + 'static,
@@ -568,7 +568,7 @@ macro_rules! key {
     };
     ($schema:ty { $vis:vis $id:ident: $type:ty = $init:expr }) => {
         $vis static $id: $crate::Key<$schema, $type> =
-            $crate::helpers::new_key(|| $crate::helpers::RawKey::<_, $type>::new_with_default_immut(
+            $crate::helpers::new_key(|| $crate::helpers::RawKey::<_, $type>::new_with_default(
                 || $init,
                 |x| x));
     };
