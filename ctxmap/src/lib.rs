@@ -428,7 +428,7 @@ pub mod helpers {
         }
     }
     impl<S: Schema, T: ?Sized + 'static> RawKey<S, T, false> {
-        pub fn new_with_default<Init, ToRef, V>(init: Init, to_ref: ToRef) -> Self
+        pub fn new_with<Init, ToRef, V>(init: Init, to_ref: ToRef) -> Self
         where
             Init: Send + Sync + Fn() -> V + 'static,
             ToRef: Send + Sync + Fn(&V) -> &T + 'static,
@@ -445,11 +445,7 @@ pub mod helpers {
         }
     }
     impl<S: Schema, T: ?Sized + 'static> RawKey<S, T, true> {
-        pub fn new_with_default_mut<Init, ToRef, ToMut, V>(
-            init: Init,
-            to_ref: ToRef,
-            to_mut: ToMut,
-        ) -> Self
+        pub fn new_with_mut<Init, ToRef, ToMut, V>(init: Init, to_ref: ToRef, to_mut: ToMut) -> Self
         where
             Init: Send + Sync + Fn() -> V + 'static,
             ToRef: Send + Sync + Fn(&V) -> &T + 'static,
@@ -464,11 +460,10 @@ pub mod helpers {
         }
     }
 
-    pub const fn new_key_without_default<S: Schema, T: ?Sized + 'static, const MUT: bool>(
-    ) -> Key<S, T, MUT> {
+    pub const fn new_key<S: Schema, T: ?Sized + 'static, const MUT: bool>() -> Key<S, T, MUT> {
         Key(Lazy::new(|| RawKey::new(None)))
     }
-    pub const fn new_key<S: Schema, T: ?Sized + 'static, const MUT: bool>(
+    pub const fn new_key_with<S: Schema, T: ?Sized + 'static, const MUT: bool>(
         f: fn() -> RawKey<S, T, MUT>,
     ) -> Key<S, T, MUT> {
         Key(Lazy::new(f))
@@ -561,23 +556,18 @@ macro_rules! schema {
 macro_rules! key {
     ($schema:ty { }) => { };
     ($schema:ty { $vis:vis $id:ident: $type:ty }) => {
-        $vis static $id: $crate::Key<$schema, $type> = $crate::helpers::new_key_without_default();
+        $vis static $id: $crate::Key<$schema, $type> = $crate::helpers::new_key();
     };
     ($schema:ty { $vis:vis mut $id:ident: $type:ty }) => {
-        $vis static $id: $crate::KeyMut<$schema, $type> = $crate::helpers::new_key_without_default();
+        $vis static $id: $crate::KeyMut<$schema, $type> = $crate::helpers::new_key();
     };
     ($schema:ty { $vis:vis $id:ident: $type:ty = $init:expr }) => {
         $vis static $id: $crate::Key<$schema, $type> =
-            $crate::helpers::new_key(|| $crate::helpers::RawKey::<_, $type>::new_with_default(
-                || $init,
-                |x| x));
+            $crate::helpers::new_key_with(|| $crate::helpers::RawKey::<_, $type>::new_with(|| $init, |x| x));
     };
     ($schema:ty { $vis:vis mut $id:ident: $type:ty = $init:expr }) => {
         $vis static $id: $crate::KeyMut<$schema, $type> =
-            $crate::helpers::new_key(|| $crate::helpers::RawKeyMut::<_, $type>::new_with_default_mut(
-                || $init,
-                |x| x,
-                |x| x));
+            $crate::helpers::new_key_with(|| $crate::helpers::RawKeyMut::<_, $type>::new_with_mut(|| $init, |x| x, |x| x));
     };
     ($schema:ty { $vis:vis $id:ident: $type:ty $(= $init:expr)?, $($tt:tt)* }) => {
         $crate::key!($schema { $vis $id: $type $(= $init)? });
