@@ -1,53 +1,28 @@
-error[E0308]: mismatched types
-  --> tests/compile_fail/swap.rs:12:22
+error[E0521]: borrowed data escapes outside of closure
+  --> tests/compile_fail/swap.rs:12:13
    |
+10 |     m0.with(&KEY_X, &2, |m0| {
+   |                          -- `m0` declared here, outside of the closure body
+11 |         m1.with(&KEY_X, &3, |m1| {
+   |                              -- `m1` is a reference that is only valid in the closure body
 12 |             swap(m0, m1);
-   |                      ^^ lifetime mismatch
+   |             ^^^^^^^^^^^^ `m1` escapes the closure body here
    |
-   = note: expected mutable reference `&mut CtxMapView<'_, Schema>`
-              found mutable reference `&mut CtxMapView<'_, Schema>`
-note: the anonymous lifetime #2 defined here...
-  --> tests/compile_fail/swap.rs:11:29
-   |
-11 |           m1.with(&KEY_X, &3, |m1| {
-   |  _____________________________^
-12 | |             swap(m0, m1);
-13 | |         });
-   | |_________^
-note: ...does not necessarily outlive the anonymous lifetime #2 defined here
-  --> tests/compile_fail/swap.rs:10:25
-   |
-10 |       m0.with(&KEY_X, &2, |m0| {
-   |  _________________________^
-11 | |         m1.with(&KEY_X, &3, |m1| {
-12 | |             swap(m0, m1);
-13 | |         });
-14 | |     });
-   | |_____^
+   = note: requirement occurs because of a mutable reference to `CtxMapView<'_, Schema>`
+   = note: mutable references are invariant over their type parameter
+   = help: see <https://doc.rust-lang.org/nomicon/subtyping.html> for more information about variance
 
-error[E0308]: mismatched types
-  --> tests/compile_fail/swap.rs:12:22
+error[E0521]: borrowed data escapes outside of closure
+  --> tests/compile_fail/swap.rs:12:13
    |
+10 |     m0.with(&KEY_X, &2, |m0| {
+   |                          --
+   |                          |
+   |                          `m0` is a reference that is only valid in the closure body
+   |                          has type `&mut CtxMapView<'1, Schema>`
+11 |         m1.with(&KEY_X, &3, |m1| {
 12 |             swap(m0, m1);
-   |                      ^^ lifetime mismatch
-   |
-   = note: expected mutable reference `&mut CtxMapView<'_, Schema>`
-              found mutable reference `&mut CtxMapView<'_, Schema>`
-note: the anonymous lifetime #2 defined here...
-  --> tests/compile_fail/swap.rs:10:25
-   |
-10 |       m0.with(&KEY_X, &2, |m0| {
-   |  _________________________^
-11 | |         m1.with(&KEY_X, &3, |m1| {
-12 | |             swap(m0, m1);
-13 | |         });
-14 | |     });
-   | |_____^
-note: ...does not necessarily outlive the anonymous lifetime #2 defined here
-  --> tests/compile_fail/swap.rs:11:29
-   |
-11 |           m1.with(&KEY_X, &3, |m1| {
-   |  _____________________________^
-12 | |             swap(m0, m1);
-13 | |         });
-   | |_________^
+   |             ^^^^^^^^^^^^
+   |             |
+   |             `m0` escapes the closure body here
+   |             argument requires that `'1` must outlive `'static`
