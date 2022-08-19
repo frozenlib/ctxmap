@@ -101,7 +101,7 @@ impl<S: Schema> CtxMap<S> {
     /// });
     /// assert_eq!(m[&KEY_A], 20);
     /// ```
-    pub fn with<T: ?Sized + 'static, U>(
+    pub fn with<T: ?Sized, U>(
         &mut self,
         key: &'static Key<S, T>,
         value: &T,
@@ -129,7 +129,7 @@ impl<S: Schema> CtxMap<S> {
     /// });
     /// assert_eq!(m[&KEY_A], 25);
     /// ```
-    pub fn with_mut<T: ?Sized + 'static, U, const MUT: bool>(
+    pub fn with_mut<T: ?Sized, U, const MUT: bool>(
         &mut self,
         key: &'static Key<S, T, MUT>,
         value: &mut T,
@@ -234,7 +234,7 @@ impl<S: Schema> Default for CtxMap<S> {
 impl<S, T, const MUT: bool> Index<&'static Key<S, T, MUT>> for CtxMap<S>
 where
     S: Schema,
-    T: ?Sized + 'static,
+    T: ?Sized,
 {
     type Output = T;
 
@@ -245,7 +245,7 @@ where
 impl<S, T> IndexMut<&'static KeyMut<S, T>> for CtxMap<S>
 where
     S: Schema,
-    T: ?Sized + 'static,
+    T: ?Sized,
 {
     fn index_mut(&mut self, index: &'static KeyMut<S, T>) -> &mut Self::Output {
         self.get_mut(index).expect("no entry found for key")
@@ -262,7 +262,7 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
     /// Sets a value to `CtxMap` only while `f` is being called.
     ///
     /// See [`CtxMap::with`] for more details.
-    pub fn with<T: ?Sized + 'static, U>(
+    pub fn with<T: ?Sized, U>(
         &mut self,
         key: &'static Key<S, T>,
         value: &T,
@@ -275,7 +275,7 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
     /// Sets a mutable value to `CtxMap` only while `f` is being called.
     ///
     /// See [`CtxMap::with_mut`] for more details.
-    pub fn with_mut<T: ?Sized + 'static, U, const MUT: bool>(
+    pub fn with_mut<T: ?Sized, U, const MUT: bool>(
         &mut self,
         key: &'static Key<S, T, MUT>,
         value: &mut T,
@@ -285,7 +285,7 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
         self.with_impl(key, ptr, f)
     }
 
-    fn with_impl<T: ?Sized + 'static, U, P: 'static, const MUT: bool>(
+    fn with_impl<T: ?Sized, U, P: 'static, const MUT: bool>(
         &mut self,
         key: &'static Key<S, T, MUT>,
         ptr: P,
@@ -326,7 +326,7 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
 impl<'a, S, T, const MUT: bool> Index<&'static Key<S, T, MUT>> for CtxMapView<'a, S>
 where
     S: Schema,
-    T: ?Sized + 'static,
+    T: ?Sized,
 {
     type Output = T;
 
@@ -337,7 +337,7 @@ where
 impl<'a, S, T> IndexMut<&'static KeyMut<S, T>> for CtxMapView<'a, S>
 where
     S: Schema,
-    T: ?Sized + 'static,
+    T: ?Sized,
 {
     fn index_mut(&mut self, index: &'static KeyMut<S, T>) -> &mut Self::Output {
         &mut self.0[index]
@@ -347,7 +347,7 @@ where
 /// A key for [`CtxMap`].
 ///
 /// Use [`key`] macro to create `Key`.
-pub struct Key<S: Schema, T: ?Sized + 'static, const MUT: bool = false>(Lazy<RawKey<S, T, MUT>>);
+pub struct Key<S: Schema, T: ?Sized, const MUT: bool = false>(Lazy<RawKey<S, T, MUT>>);
 pub type KeyMut<S, T> = Key<S, T, true>;
 trait KeyData<T: ?Sized>: Send + Sync {
     fn get<'a>(&self, value: &'a dyn Any) -> &'a T;
@@ -411,14 +411,14 @@ pub mod helpers {
         }
     }
 
-    pub struct RawKey<S: Schema, T: ?Sized + 'static, const MUT: bool = false> {
+    pub struct RawKey<S: Schema, T: ?Sized, const MUT: bool = false> {
         pub(crate) schema: PhantomData<S>,
         pub(crate) index: usize,
         pub(crate) data: Option<Box<dyn KeyData<T>>>,
     }
     pub type RawKeyMut<S, T> = RawKey<S, T, true>;
 
-    impl<S: Schema, T: ?Sized + 'static, const MUT: bool> RawKey<S, T, MUT> {
+    impl<S: Schema, T: ?Sized, const MUT: bool> RawKey<S, T, MUT> {
         fn new(data: Option<Box<dyn KeyData<T>>>) -> Self {
             Self {
                 schema: PhantomData,
