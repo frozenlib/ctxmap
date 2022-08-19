@@ -11,5 +11,5 @@ error[E0308]: mismatched types
 note: associated function defined here
    --> $WORKSPACE/ctxmap/src/lib.rs
     |
-    |     pub fn with<T: ?Sized + 'static, U>(
+    |     pub fn with<T: ?Sized, U>(
     |            ^^^^
