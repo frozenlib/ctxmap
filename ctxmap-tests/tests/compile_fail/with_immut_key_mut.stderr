@@ -8,7 +8,7 @@ error[E0308]: mismatched types
     |
     = note: expected reference `&'static Key<_, {integer}>`
                found reference `&Key<main::Schema, u8, true>`
-note: associated function defined here
+note: method defined here
    --> $WORKSPACE/ctxmap/src/lib.rs
     |
     |     pub fn with<T: ?Sized, U>(
