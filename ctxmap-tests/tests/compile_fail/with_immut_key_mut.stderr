@@ -6,8 +6,8 @@ error[E0308]: mismatched types
     |       |
     |       arguments to this method are incorrect
     |
-    = note: expected reference `&'static Key<_, {integer}>`
-               found reference `&Key<main::Schema, u8, true>`
+    = note: expected reference `&'static ctxmap::Key<_, {integer}>`
+               found reference `&ctxmap::Key<main::Schema, u8, true>`
 note: method defined here
    --> $WORKSPACE/ctxmap/src/lib.rs
     |
