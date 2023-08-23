@@ -15,6 +15,8 @@ jobs:
         run: rustup update stable
       - name: Show cargo version
         run: cargo --version
+      - name: Install rust-src
+        run: rustup component add rust-src
       - name: Build
         run: cargo build --verbose
       - name: Build tests
