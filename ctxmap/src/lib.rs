@@ -48,12 +48,12 @@
 // #![include_doc("../../README.md", end("## License"))]
 
 use helpers::*;
-use once_cell::sync::Lazy;
 use std::{
     any::Any,
     cell::UnsafeCell,
     marker::PhantomData,
     ops::{Index, IndexMut},
+    sync::LazyLock,
 };
 
 /// A collection that can store references of different types and lifetimes.
@@ -347,7 +347,7 @@ where
 /// A key for [`CtxMap`].
 ///
 /// Use [`key`] macro to create `Key`.
-pub struct Key<S: Schema, T: ?Sized, const MUT: bool = false>(Lazy<RawKey<S, T, MUT>>);
+pub struct Key<S: Schema, T: ?Sized, const MUT: bool = false>(LazyLock<RawKey<S, T, MUT>>);
 pub type KeyMut<S, T> = Key<S, T, true>;
 trait KeyData<T: ?Sized>: Send + Sync {
     fn get<'a>(&self, value: &'a dyn Any) -> &'a T;
@@ -390,10 +390,12 @@ where
 #[doc(hidden)]
 pub mod helpers {
     use crate::{Key, KeyData, KeyDataValue, Schema};
-    use once_cell::sync::Lazy;
     use std::{
         marker::PhantomData,
-        sync::atomic::{AtomicUsize, Ordering},
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            LazyLock,
+        },
     };
 
     pub struct SchemaData {
@@ -462,12 +464,12 @@ pub mod helpers {
     }
 
     pub const fn new_key<S: Schema, T: ?Sized + 'static, const MUT: bool>() -> Key<S, T, MUT> {
-        Key(Lazy::new(|| RawKey::new(None)))
+        Key(LazyLock::new(|| RawKey::new(None)))
     }
     pub const fn new_key_with<S: Schema, T: ?Sized + 'static, const MUT: bool>(
         f: fn() -> RawKey<S, T, MUT>,
     ) -> Key<S, T, MUT> {
-        Key(Lazy::new(f))
+        Key(LazyLock::new(f))
     }
 }
 
