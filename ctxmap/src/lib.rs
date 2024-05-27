@@ -401,6 +401,7 @@ pub mod helpers {
     }
 
     impl SchemaData {
+        #[allow(clippy::new_without_default)]
         pub const fn new() -> Self {
             SchemaData {
                 next: AtomicUsize::new(0),
