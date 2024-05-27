@@ -1,4 +1,4 @@
-// #![include_doc("../../README.md", start("A collection that can store references of different types and lifetimes."))]
+// #![include_doc("../README.md", start("A collection that can store references of different types and lifetimes."))]
 //! A collection that can store references of different types and lifetimes.
 //!
 //! ## Install
@@ -45,7 +45,7 @@
 //! });
 //! assert_eq!(m[&KEY_MUT], 40);
 //! ```
-// #![include_doc("../../README.md", end("## License"))]
+// #![include_doc("../README.md", end("## License"))]
 
 use helpers::*;
 use std::{
