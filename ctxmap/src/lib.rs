@@ -254,7 +254,7 @@ where
 
 /// Mutable reference to [`CtxMap`] where the value has changed.
 ///
-/// Use `CtxMapViwe` instead of `&mut CtxMap` because `&mut CtxMap`,
+/// Use `CtxMapView` instead of `&mut CtxMap` because `&mut CtxMap`,
 /// whose value has been changed, will be broken if [`std::mem::swap`] is used.
 pub struct CtxMapView<'a, S: Schema>(&'a mut CtxMap<S>);
 
