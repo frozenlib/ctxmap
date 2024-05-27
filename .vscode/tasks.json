@@ -2,8 +2,20 @@
   // See https://go.microsoft.com/fwlink/?LinkId=733558
   // for the documentation about the tasks.json format
   "version": "2.0.0",
+  "options": {
+    "env": {
+      // "RUST_BACKTRACE": "1",
+      // "RUSTFLAGS": "--cfg procmacro2_semver_exempt",
+      // "CARGO_TARGET_DIR": "Z:/temporary/target_dirs/${workspaceFolderBasename}/target/",
+    },
+  },
+  "presentation": {
+    "panel": "dedicated",
+    "clear": true,
+  },
   "tasks": [
     {
+      // Needed for run (F5)
       "type": "shell",
       "label": "cargo build",
       "command": "cargo",
@@ -13,31 +25,6 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
-      // "options": {
-      //     "env": {
-      //         "RUST_BACKTRACE": "1",
-      //     }
-      // }
-    },
-    {
-      "type": "shell",
-      "label": "cargo build release",
-      "command": "cargo",
-      "args": [
-        "build",
-        "--release"
-      ],
-      "problemMatcher": [
-        "$rustc"
-      ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
     },
     {
       "type": "shell",
@@ -53,13 +40,37 @@
         "kind": "build",
         "isDefault": true
       },
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      },
       "dependsOn": [
-        "include doc"
+        "rustdoc-include"
       ],
+    },
+    {
+      "type": "shell",
+      "label": "cargo watch test",
+      "command": "wt",
+      "args": [
+        "new-tab",
+        "cargo-watch",
+        "-c",
+        "-x",
+        "test"
+        // "nextest run",
+        // "nextest run -p {project} --test {file} -- {module}",        
+      ],
+      "problemMatcher": [],
+    },
+    {
+      "type": "shell",
+      "label": "cargo watch run",
+      "command": "wt",
+      "args": [
+        "new-tab",
+        "cargo-watch",
+        "-c",
+        "-x",
+        "run",
+      ],
+      "problemMatcher": [],
     },
     {
       "type": "shell",
@@ -73,10 +84,6 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
     },
     {
       "type": "shell",
@@ -91,13 +98,25 @@
       "problemMatcher": [
         "$rustc"
       ],
+      "dependsOn": [
+        "rustdoc-include"
+      ],
+    },
+    {
+      "type": "shell",
+      "label": "cargo llvm-cov open",
+      "command": "cargo",
+      "args": [
+        "llvm-cov",
+        "--open",
+      ],
+      "problemMatcher": [
+        "$rustc"
+      ],
       "presentation": {
         "panel": "dedicated",
         "clear": true
       },
-      "dependsOn": [
-        "include doc"
-      ],
     },
     {
       "type": "shell",
@@ -106,6 +125,8 @@
       "args": [
         "clippy",
         "--all-features",
+        "--tests",
+        "--lib",
         "--",
         "-W",
         "clippy::all"
@@ -113,10 +134,14 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
+    },
+    {
+      "type": "shell",
+      "label": "cargo fix & fmt",
+      "command": "cargo fix --all && cargo clippy --fix --allow-dirty --all && cargo fmt --all",
+      "problemMatcher": [
+        "$rustc"
+      ],
     },
     {
       "type": "shell",
@@ -131,10 +156,6 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
     },
     {
       "type": "shell",
@@ -149,10 +170,6 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
     },
     {
       "type": "shell",
@@ -168,26 +185,23 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      },
       "options": {
         "env": {
-          "TRYBUILD": "overwrite"
+          "TRYBUILD": "overwrite",
         }
       }
     },
     {
       "type": "shell",
-      "label": "include doc",
-      "command": "include-doc",
+      "label": "rustdoc-include",
+      "command": "rustdoc-include",
       "args": [
+        "--root",
         "${workspaceFolder}"
       ],
       "problemMatcher": [
         {
-          "owner": "include-doc",
+          "owner": "rustdoc-include",
           "fileLocation": [
             "relative",
             "${workspaceFolder}"
@@ -207,10 +221,6 @@
           ]
         },
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
     },
-  ]
+  ],
 }
