@@ -46,6 +46,28 @@
     },
     {
       "type": "shell",
+      "label": "cargo miri test",
+      "command": "cargo",
+      "args": [
+        "+nightly",
+        "miri",
+        "test",
+      ],
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "presentation": {
+        "panel": "dedicated",
+        "clear": true
+      },
+      // "options": {
+      //   "env": {
+      //     "MIRIFLAGS": "-Zmiri-backtrace=full",
+      //   }
+      // }
+    },
+    {
+      "type": "shell",
       "label": "cargo watch test",
       "command": "wt",
       "args": [
