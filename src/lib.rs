@@ -258,7 +258,7 @@ where
 /// whose value has been changed, will be broken if [`std::mem::swap`] is used.
 pub struct CtxMapView<'a, S: Schema>(&'a mut CtxMap<S>);
 
-impl<'a, S: Schema> CtxMapView<'a, S> {
+impl<S: Schema> CtxMapView<'_, S> {
     /// Sets a value to `CtxMap` only while `f` is being called.
     ///
     /// See [`CtxMap::with`] for more details.
@@ -323,7 +323,7 @@ impl<'a, S: Schema> CtxMapView<'a, S> {
     }
 }
 
-impl<'a, S, T, const MUT: bool> Index<&'static Key<S, T, MUT>> for CtxMapView<'a, S>
+impl<S, T, const MUT: bool> Index<&'static Key<S, T, MUT>> for CtxMapView<'_, S>
 where
     S: Schema,
     T: ?Sized,
@@ -334,7 +334,7 @@ where
         &self.0[index]
     }
 }
-impl<'a, S, T> IndexMut<&'static KeyMut<S, T>> for CtxMapView<'a, S>
+impl<S, T> IndexMut<&'static KeyMut<S, T>> for CtxMapView<'_, S>
 where
     S: Schema,
     T: ?Sized,
