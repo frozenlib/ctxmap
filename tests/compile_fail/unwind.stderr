@@ -13,7 +13,7 @@ error[E0277]: the type `&mut CtxMap<main::Schema>` may not be safely transferred
 12 | |     });
    | |_____^ `&mut CtxMap<main::Schema>` may not be safely transferred across an unwind boundary
    |
-   = help: within `{closure@$DIR/tests/compile_fail/unwind.rs:8:26: 8:28}`, the trait `UnwindSafe` is not implemented for `&mut CtxMap<main::Schema>`, which is required by `{closure@$DIR/tests/compile_fail/unwind.rs:8:26: 8:28}: UnwindSafe`
+   = help: within `{closure@$DIR/tests/compile_fail/unwind.rs:8:26: 8:28}`, the trait `UnwindSafe` is not implemented for `&mut CtxMap<main::Schema>`
 note: required because it's used within this closure
   --> tests/compile_fail/unwind.rs:8:26
    |
