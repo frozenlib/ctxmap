@@ -134,6 +134,7 @@ fn test_swap() {
     let mut m1 = CtxMap::new();
 
     m0.with(&KEY_A, &2, |m0| {
+        #[allow(clippy::swap_with_temporary)]
         swap(&mut m0.view(), &mut m1.view());
     });
     assert_eq!(m0[&KEY_A], 1);

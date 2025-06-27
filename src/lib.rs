@@ -173,7 +173,7 @@ impl<S: Schema> CtxMap<S> {
             } else {
                 let data = key.data.as_ref()?.as_ref();
                 loop {
-                    if let Some(Some(value)) = (*self.values.get()).get(index) {
+                    if let Some(Some(value)) = (&*self.values.get()).get(index) {
                         let p: *const dyn Any = value.as_ref();
                         return Some(data.get(&*p));
                     }
@@ -207,7 +207,7 @@ impl<S: Schema> CtxMap<S> {
             } else {
                 let data = key.data.as_ref()?.as_ref();
                 loop {
-                    if let Some(Some(value)) = (*self.values.get()).get_mut(index) {
+                    if let Some(Some(value)) = (&mut *self.values.get()).get_mut(index) {
                         let p: *mut dyn Any = value.as_mut();
                         return Some(data.get_mut(&mut *p));
                     }
