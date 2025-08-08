@@ -139,7 +139,7 @@ impl<S: Schema> CtxMap<S> {
     }
 
     /// Get [`CtxMapView`] that references `self`.
-    pub fn view(&mut self) -> CtxMapView<S> {
+    pub fn view(&mut self) -> CtxMapView<'_, S> {
         CtxMapView(self)
     }
 
@@ -304,7 +304,7 @@ impl<S: Schema> CtxMapView<'_, S> {
     }
 
     /// Return `CtxMapView` with modified lifetime.
-    pub fn view(&mut self) -> CtxMapView<S> {
+    pub fn view(&mut self) -> CtxMapView<'_, S> {
         CtxMapView(self.0)
     }
 
